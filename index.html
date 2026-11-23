@@ -124,6 +124,95 @@
       padding: 0 18px;
     }
 
+    /* Hidden Teacher Demo Panel (activated only via Shift+L) */
+    .teacher-panel {
+      background: linear-gradient(135deg, #1e1b4b, #172554);
+      border: 2px solid #818cf8;
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 22px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      font-size: 0.96rem;
+    }
+
+    .teacher-panel-top {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .teacher-title {
+      font-weight: 800;
+      font-size: 1.05rem;
+      color: #c7d2fe;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .teacher-overview-box {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(129, 140, 248, 0.35);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin: 10px 0 14px;
+      color: #e2e8f0;
+      line-height: 1.5;
+    }
+
+    .teacher-overview-box ul {
+      margin: 8px 0 0 0;
+      padding-left: 20px;
+    }
+
+    .teacher-overview-box li {
+      margin-bottom: 4px;
+    }
+
+    .teacher-nav-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .teacher-stage-btn {
+      background: rgba(30, 41, 59, 0.9);
+      color: #e2e8f0;
+      border: 1px solid #475569;
+      padding: 6px 11px;
+      font-size: 0.85rem;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+
+    .teacher-stage-btn:hover {
+      border-color: #818cf8;
+      color: #ffffff;
+    }
+
+    .teacher-stage-btn.active {
+      background: #6366f1;
+      border-color: #a5b4fc;
+      color: #ffffff;
+    }
+
+    .teacher-action-btn {
+      background: #312e81;
+      color: #e0e7ff;
+      border: 1px solid #818cf8;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      border-radius: 8px;
+    }
+
+    .teacher-action-btn:hover {
+      background: #4338ca;
+    }
+
     .card {
       background-color: var(--bg-card);
       border: 1px solid var(--border);
@@ -528,7 +617,6 @@ function loadSwedishVoices() {
   const voices = window.speechSynthesis.getVoices();
   if (!voices || voices.length === 0) return;
 
-  // Prefer Swedish voices (Google Svenska on ChromeOS or native sv-SE)
   svVoice =
     voices.find(v => v.lang.toLowerCase() === 'sv-se' && v.name.toLowerCase().includes('google')) ||
     voices.find(v => v.lang.toLowerCase() === 'sv-se') ||
@@ -565,7 +653,7 @@ function speakText(text, btnEl = null) {
   const utterance = new SpeechSynthesisUtterance(cleanText);
   utterance.lang = 'sv-SE';
   if (svVoice) utterance.voice = svVoice;
-  utterance.rate = 0.96; // Slightly calmer pace for clarity
+  utterance.rate = 0.96;
   utterance.pitch = 1.0;
 
   if (btnEl) {
@@ -606,8 +694,10 @@ function ttsButton(textToRead, label = "Lyssna") {
    2. ANTI-PASTE & TOAST GUARDRAILS
    ========================================================= */
 let toastTimeout = null;
-function showToast(msg) {
+function showToast(msg, isSuccess = false) {
   const el = document.getElementById('toast');
+  el.style.backgroundColor = isSuccess ? '#14532d' : '#991b1b';
+  el.style.borderColor = isSuccess ? '#22c55e' : '#f87171';
   el.textContent = msg;
   el.style.display = 'block';
   clearTimeout(toastTimeout);
@@ -627,7 +717,6 @@ function attachAntiPaste(el) {
     showToast("🚫 Dra-och-släpp text är avstängt! Skriv med egna ord.");
   });
 
-  // Catch sudden large text injections (e.g. clipboard extensions)
   let lastVal = el.value || '';
   el.addEventListener('input', () => {
     const diff = el.value.length - lastVal.length;
@@ -645,7 +734,7 @@ function wireAllNoPasteInputs() {
 }
 
 /* =========================================================
-   3. APP STATE & CURRICULUM DATA (NO TEST SCENARIO OVERLAP)
+   3. APP STATE & CURRICULUM DATA
    ========================================================= */
 const state = {
   stage: 0, // 0: Start, 1: Hypotes & Experiment, 2: Pseudo vs Naturvetenskap, 3: Källkritik, 4: Medicin & Fusk, 5: Muntligt Genrep, 6: Bonus C/A, 7: Sammanfattning
@@ -654,18 +743,24 @@ const state = {
   student2: '',
   classGroup: '',
 
+  // Teacher Demo Mode (hidden unless Shift+L is pressed)
+  teacherMode: false,
+  teacherOverviewExpanded: true,
+
   // Stage 1: Hypotes & Experiment
   s1Index: 0,
   s1Score: 0,
   s1Answered: false,
+  s1ChosenIdx: null,
   pair1Text: '',
   pair1Spoken: false,
 
   // Stage 2: Pseudovetenskap vs Naturvetenskap
   s2Index: 0,
   s2Score: 0,
-  s2Step: 'classify', // 'classify' -> 'reason'
+  s2Step: 'classify',
   s2ChosenType: null,
+  s2ReasonIdx: null,
   s2Answered: false,
 
   // Stage 3: Källkritik
@@ -681,11 +776,12 @@ const state = {
   s4Index: 0,
   s4Score: 0,
   s4Answered: false,
+  s4ChosenIdx: null,
 
   // Stage 5: Oral Rehearsal
   s5Index: 0,
   s5Revealed: false,
-  s5Ratings: [], // 'green' or 'yellow'
+  s5Ratings: [],
   s5TimerVal: 45,
   s5TimerRunning: false,
 
@@ -699,17 +795,16 @@ const state = {
 let oralInterval = null;
 
 const stageMeta = [
-  { name: "Start: Par-incheckning", pct: 0, time: "Ca 40 min totalt" },
-  { name: "Etapp 1: Hypotes & Experiment", pct: 15, time: "~7 min" },
-  { name: "Etapp 2: Vetenskap eller Pseudovetenskap?", pct: 32, time: "~8 min" },
-  { name: "Etapp 3: Källkritik på bygget", pct: 50, time: "~8 min" },
-  { name: "Etapp 4: Medicinska genombrott & Forskningsfusk", pct: 68, time: "~7 min" },
-  { name: "Etapp 5: Muntligt genrep (E-nivå)", pct: 84, time: "~6 min" },
-  { name: "Bonus-etapp: Sikta mot C/A", pct: 94, time: "~4 min (Valfri)" },
-  { name: "Klar! Kopiera till Google Classroom", pct: 100, time: "Färdig!" }
+  { name: "Start: Par-incheckning", short: "Start", pct: 0, time: "Ca 40 min totalt" },
+  { name: "Etapp 1: Hypotes & Experiment", short: "Etapp 1: Hypotes", pct: 15, time: "~7 min" },
+  { name: "Etapp 2: Vetenskap eller Pseudovetenskap?", short: "Etapp 2: Pseudo", pct: 32, time: "~8 min" },
+  { name: "Etapp 3: Källkritik på bygget", short: "Etapp 3: Källkritik", pct: 50, time: "~8 min" },
+  { name: "Etapp 4: Medicinska genombrott & Forskningsfusk", short: "Etapp 4: Medicin/Fusk", pct: 68, time: "~7 min" },
+  { name: "Etapp 5: Muntligt genrep (E-nivå)", short: "Etapp 5: Muntligt", pct: 84, time: "~6 min" },
+  { name: "Bonus-etapp: Sikta mot C/A", short: "Bonus C/A", pct: 94, time: "~4 min (Valfri)" },
+  { name: "Klar! Kopiera till Google Classroom", short: "Sammanfattning", pct: 100, time: "Färdig!" }
 ];
 
-// STAGE 1 DATA: Hypotheses & Scientific Experiments (Construction/Everyday contexts, zero test overlap)
 const s1Questions = [
   {
     badge: "Fråga 1 av 5 • Hypotes",
@@ -763,7 +858,6 @@ const s1Questions = [
   }
 ];
 
-// STAGE 2 DATA: Naturvetenskap vs Pseudovetenskap
 const s2Items = [
   {
     claim: "”Ett koppararmband balanserar kroppens energifält och tar bort ryggont efter tunga lyft.”",
@@ -821,7 +915,6 @@ const s2Items = [
   }
 ];
 
-// STAGE 4 DATA: Medical breakthroughs & Research fraud
 const s4Cards = [
   {
     category: "Medicinsk upptäckt",
@@ -865,7 +958,6 @@ const s4Cards = [
   }
 ];
 
-// STAGE 5 DATA: Oral Exam Rehearsal (E-level)
 const s5Questions = [
   {
     q: "1. Vad är en hypotes?",
@@ -907,7 +999,192 @@ const s5Questions = [
 ];
 
 /* =========================================================
-   4. RENDERING FUNCTIONS
+   4. SECRET TEACHER MODE & DEMO SHORTCUTS (Shift+L / Shift+F)
+   ========================================================= */
+document.addEventListener('keydown', (e) => {
+  // Ignore when typing inside an input or textarea so normal capital L/F works
+  const active = document.activeElement;
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+    return;
+  }
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+  if (e.shiftKey && (e.code === 'KeyL' || e.key === 'L' || e.key === 'l')) {
+    e.preventDefault();
+    toggleTeacherMode();
+  } else if (e.shiftKey && (e.code === 'KeyF' || e.key === 'F' || e.key === 'f')) {
+    e.preventDefault();
+    demoForwardStep();
+  }
+});
+
+function toggleTeacherMode() {
+  state.teacherMode = !state.teacherMode;
+  if (state.teacherMode) {
+    state.teacherOverviewExpanded = true;
+    showToast("🛠️ Lärarläge aktiverat! Alla etapper är upplåsta.", true);
+  } else {
+    showToast("Lärarläge stängt.");
+  }
+  render();
+}
+
+function jumpToStage(targetStage) {
+  if (!state.student1) state.student1 = "Demo-Elev 1";
+  if (!state.student2) state.student2 = "Demo-Elev 2";
+  state.stage = targetStage;
+  render();
+}
+
+function demoForwardStep() {
+  // Ensure demo names exist if skipping past Start
+  if (!state.student1) state.student1 = "Demo-Elev 1";
+  if (!state.student2) state.student2 = "Demo-Elev 2";
+
+  if (state.stage === 0) {
+    if (!state.classGroup) state.classGroup = "BA23A";
+    state.stage = 1;
+    render();
+    return;
+  }
+
+  if (state.stage === 1) {
+    if (state.s1Index < s1Questions.length) {
+      if (!state.s1Answered) {
+        const correctIdx = s1Questions[state.s1Index].options.findIndex(o => o.correct);
+        answerS1(correctIdx);
+      } else {
+        nextS1();
+      }
+    } else {
+      if (!state.pair1Text || state.pair1Text.length < 15) {
+        state.pair1Text = "En hypotes är ett påstående om vad som kommer hända i ett försök. Ett vetenskapligt experiment ändrar en faktor i taget och kan upprepas.";
+      }
+      state.pair1Spoken = true;
+      state.stage = 2;
+      render();
+    }
+    return;
+  }
+
+  if (state.stage === 2) {
+    const item = s2Items[state.s2Index];
+    if (state.s2Step === 'classify') {
+      chooseS2Type(item.type);
+    } else if (!state.s2Answered) {
+      const correctIdx = item.reasons.findIndex(r => r.correct);
+      chooseS2Reason(correctIdx);
+    } else {
+      nextS2();
+    }
+    return;
+  }
+
+  if (state.stage === 3) {
+    if (!state.s3DefCorrect) {
+      answerS3Def(true);
+    } else if (state.s3ReasonsScore < 2) {
+      state.s3ReasonsSelected = ['method', 'peer'];
+      checkS3Reasons();
+    } else {
+      if (!state.pair2Text || state.pair2Text.length < 15) {
+        state.pair2Text = "1. Den vetenskapliga artikeln bygger på vetenskaplig metod och experiment. 2. Den har granskats av andra forskare och saknar vinstintresse.";
+      }
+      state.pair2Spoken = true;
+      state.stage = 4;
+      render();
+    }
+    return;
+  }
+
+  if (state.stage === 4) {
+    if (!state.s4Answered) {
+      const correctIdx = s4Cards[state.s4Index].options.findIndex(o => o.correct);
+      answerS4(correctIdx);
+    } else {
+      nextS4();
+    }
+    return;
+  }
+
+  if (state.stage === 5) {
+    if (!state.s5Revealed) {
+      revealOral();
+    } else {
+      rateOral('green');
+    }
+    return;
+  }
+
+  if (state.stage === 6) {
+    if (!state.caChoiceCorrect) {
+      answerCaChoice(true);
+    } else {
+      if (!state.caText || state.caText.length < 10) {
+        state.caText = "Om andra forskare upprepar experimentet kan man avslöja forskningsfusk eller slumpfel och se om resultatet verkligen stämmer.";
+      }
+      state.didBonus = true;
+      state.stage = 7;
+      render();
+    }
+    return;
+  }
+
+  if (state.stage === 7) {
+    showToast("Du är redan på sista sidan (Sammanfattning)!", true);
+  }
+}
+
+function renderTeacherBanner() {
+  if (!state.teacherMode) return '';
+
+  return `
+    <div class="teacher-panel">
+      <div class="teacher-panel-top">
+        <div class="teacher-title">
+          <span>🛠️ LÄRARLÄGE & DEMO-ÖVERSIKT</span>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="teacher-action-btn" onclick="demoForwardStep()">
+            ⏩ Nästa steg (Shift+F)
+          </button>
+          <button type="button" class="teacher-action-btn" onclick="state.teacherOverviewExpanded = !state.teacherOverviewExpanded; render();">
+            ${state.teacherOverviewExpanded ? '▲ Dölj översikt' : '▼ Visa översikt'}
+          </button>
+          <button type="button" class="teacher-action-btn" onclick="toggleTeacherMode()">
+            ✕ Stäng (Shift+L)
+          </button>
+        </div>
+      </div>
+
+      ${state.teacherOverviewExpanded ? `
+        <div class="teacher-overview-box">
+          <strong>Activity Overview — Lektion 1: Vetenskapsdetektiven (~40 min)</strong>
+          <p style="margin: 6px 0;">
+            Designed for <em>Bygg- och anläggning</em> students working in pairs to prepare for a small-group oral exam in Naturkunskap 1a1:
+          </p>
+          <ul>
+            <li><strong>Accessibility & Pacing:</strong> Native Swedish TTS (<code>sv-SE</code>) on every prompt/feedback box + global Auto-read toggle, chunked 6–8 min stages, and zero overlap with actual test scenarios.</li>
+            <li><strong>Oral Rehearsal & Anti-Paste:</strong> Pairs complete spoken <em>Par-snack</em> checkpoints and a timed 5-question <em>Muntligt genrep</em>. Pasting is blocked in all text fields; final progress exports as a copy-ready summary for Google Classroom.</li>
+            <li><strong>Demo Controls:</strong> Click any stage button below to jump directly, or press <strong>Shift + F</strong> to step forward through questions and auto-fill demo answers. Press <strong>Shift + L</strong> anytime to hide this bar.</li>
+          </ul>
+        </div>
+      ` : ''}
+
+      <div style="font-size: 0.85rem; color: #c7d2fe; font-weight: 700;">Hoppa direkt till valfri etapp:</div>
+      <div class="teacher-nav-grid">
+        ${stageMeta.map((m, idx) => `
+          <button type="button" class="teacher-stage-btn ${state.stage === idx ? 'active' : ''}" onclick="jumpToStage(${idx})">
+            ${escapeHtml(m.short)}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+/* =========================================================
+   5. RENDERING FUNCTIONS
    ========================================================= */
 function updateHeader() {
   const meta = stageMeta[state.stage] || stageMeta[0];
@@ -923,16 +1200,16 @@ function render() {
   updateHeader();
 
   const container = document.getElementById('appContainer');
-  let html = '';
+  let html = renderTeacherBanner();
 
-  if (state.stage === 0) html = renderStart();
-  else if (state.stage === 1) html = renderStage1();
-  else if (state.stage === 2) html = renderStage2();
-  else if (state.stage === 3) html = renderStage3();
-  else if (state.stage === 4) html = renderStage4();
-  else if (state.stage === 5) html = renderStage5();
-  else if (state.stage === 6) html = renderStage6();
-  else if (state.stage === 7) html = renderSummary();
+  if (state.stage === 0) html += renderStart();
+  else if (state.stage === 1) html += renderStage1();
+  else if (state.stage === 2) html += renderStage2();
+  else if (state.stage === 3) html += renderStage3();
+  else if (state.stage === 4) html += renderStage4();
+  else if (state.stage === 5) html += renderStage5();
+  else if (state.stage === 6) html += renderStage6();
+  else if (state.stage === 7) html += renderSummary();
 
   container.innerHTML = html;
   wireAllNoPasteInputs();
@@ -1066,7 +1343,6 @@ function renderStage1() {
       </div>
     `;
   } else {
-    // Pair Talk #1
     const pairPrompt = "Par-snack 1: Turas om att förklara högt för varandra med egna ord. 1. Vad är en hypotes? 2. Vad kännetecknar ett vetenskapligt experiment? Skriv sedan ner ert gemensamma svar i rutan.";
     return `
       <div class="card">
@@ -1519,7 +1795,6 @@ function nextS4() {
 /* --- STAGE 5: ORAL REHEARSAL (E-LEVEL) --- */
 function renderStage5() {
   const item = s5Questions[state.s5Index];
-  const isLast = state.s5Index === s5Questions.length - 1;
   const checkText = item.checklist.join(' ');
 
   return `
@@ -1807,17 +2082,7 @@ function fallbackCopy(textarea) {
 }
 
 function showCopySuccess() {
-  const el = document.getElementById('toast');
-  el.style.backgroundColor = '#14532d';
-  el.style.borderColor = '#22c55e';
-  el.textContent = "✅ Kopierat! Gå till Google Classroom och tryck Ctrl + V i ert dokument.";
-  el.style.display = 'block';
-  clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => {
-    el.style.display = 'none';
-    el.style.backgroundColor = '#991b1b';
-    el.style.borderColor = '#f87171';
-  }, 4500);
+  showToast("✅ Kopierat! Gå till Google Classroom och tryck Ctrl + V i ert dokument.", true);
 }
 
 function escapeHtml(str) {
