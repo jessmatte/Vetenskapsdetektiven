@@ -124,15 +124,15 @@
       padding: 0 18px;
     }
 
-    /* Hidden Teacher Demo Panel (activated only via Shift+L) */
+    /* Class Overview & Walkthrough Panel (toggled via Shift+L) */
     .teacher-panel {
       background: linear-gradient(135deg, #1e1b4b, #172554);
       border: 2px solid #818cf8;
       border-radius: var(--radius);
-      padding: 18px 20px;
+      padding: 20px 22px;
       margin-bottom: 22px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-      font-size: 0.96rem;
+      font-size: 1rem;
     }
 
     .teacher-panel-top {
@@ -146,30 +146,30 @@
 
     .teacher-title {
       font-weight: 800;
-      font-size: 1.05rem;
-      color: #c7d2fe;
+      font-size: 1.15rem;
+      color: #e0e7ff;
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
     .teacher-overview-box {
-      background: rgba(15, 23, 42, 0.65);
-      border: 1px solid rgba(129, 140, 248, 0.35);
-      border-radius: 10px;
-      padding: 14px 16px;
-      margin: 10px 0 14px;
-      color: #e2e8f0;
-      line-height: 1.5;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(129, 140, 248, 0.4);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 12px 0 16px;
+      color: #f1f5f9;
+      line-height: 1.55;
     }
 
     .teacher-overview-box ul {
-      margin: 8px 0 0 0;
-      padding-left: 20px;
+      margin: 10px 0 10px 0;
+      padding-left: 22px;
     }
 
     .teacher-overview-box li {
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
     .teacher-nav-grid {
@@ -743,7 +743,7 @@ const state = {
   student2: '',
   classGroup: '',
 
-  // Teacher Demo Mode (hidden unless Shift+L is pressed)
+  // Class Walkthrough / Overview Mode (toggled via Shift+L)
   teacherMode: false,
   teacherOverviewExpanded: true,
 
@@ -999,7 +999,7 @@ const s5Questions = [
 ];
 
 /* =========================================================
-   4. SECRET TEACHER MODE & DEMO SHORTCUTS (Shift+L / Shift+F)
+   4. CLASS OVERVIEW & WALKTHROUGH MODE (Shift+L / Shift+F)
    ========================================================= */
 document.addEventListener('keydown', (e) => {
   // Ignore when typing inside an input or textarea so normal capital L/F works
@@ -1022,24 +1022,23 @@ function toggleTeacherMode() {
   state.teacherMode = !state.teacherMode;
   if (state.teacherMode) {
     state.teacherOverviewExpanded = true;
-    showToast("🛠️ Lärarläge aktiverat! Alla etapper är upplåsta.", true);
+    showToast("📋 Lektionsöversikt visad för genomgång!", true);
   } else {
-    showToast("Lärarläge stängt.");
+    showToast("Lektionsöversikt stängd.");
   }
   render();
 }
 
 function jumpToStage(targetStage) {
-  if (!state.student1) state.student1 = "Demo-Elev 1";
-  if (!state.student2) state.student2 = "Demo-Elev 2";
+  if (!state.student1) state.student1 = "Exempel-Elev 1";
+  if (!state.student2) state.student2 = "Exempel-Elev 2";
   state.stage = targetStage;
   render();
 }
 
 function demoForwardStep() {
-  // Ensure demo names exist if skipping past Start
-  if (!state.student1) state.student1 = "Demo-Elev 1";
-  if (!state.student2) state.student2 = "Demo-Elev 2";
+  if (!state.student1) state.student1 = "Exempel-Elev 1";
+  if (!state.student2) state.student2 = "Exempel-Elev 2";
 
   if (state.stage === 0) {
     if (!state.classGroup) state.classGroup = "BA23A";
@@ -1131,22 +1130,25 @@ function demoForwardStep() {
   }
 
   if (state.stage === 7) {
-    showToast("Du är redan på sista sidan (Sammanfattning)!", true);
+    showToast("Ni är redan på sista sidan (Sammanfattning)!", true);
   }
 }
 
 function renderTeacherBanner() {
   if (!state.teacherMode) return '';
 
+  const overviewSpeech = "Välkomna till Lektion 1: Vetenskapsdetektiven! Idag jobbar ni i par i cirka 40 minuter och tränar tillsammans inför det muntliga provet om vetenskapligt arbetssätt. Lektionen har fem etapper: 1. Hypotes och experiment. 2. Naturvetenskap eller pseudovetenskap. 3. Källkritik på bygget. 4. Medicinska genombrott och forskningsfusk. 5. Muntligt genrep med riktiga provfrågor. Använd gärna Lyssna-knappen på varje uppgift, prata högt vid alla par-snack, och kopiera er sammanfattning till Google Classroom när ni är klara!";
+
   return `
     <div class="teacher-panel">
       <div class="teacher-panel-top">
         <div class="teacher-title">
-          <span>🛠️ LÄRARLÄGE & DEMO-ÖVERSIKT</span>
+          <span>📋 GENOMGÅNG & LEKTIONSÖVERSIKT • Lektion 1 av 3</span>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          ${ttsButton(overviewSpeech, "Läs upp översikten")}
           <button type="button" class="teacher-action-btn" onclick="demoForwardStep()">
-            ⏩ Nästa steg (Shift+F)
+            ⏩ Visa nästa steg (Shift+F)
           </button>
           <button type="button" class="teacher-action-btn" onclick="state.teacherOverviewExpanded = !state.teacherOverviewExpanded; render();">
             ${state.teacherOverviewExpanded ? '▲ Dölj översikt' : '▼ Visa översikt'}
@@ -1159,19 +1161,24 @@ function renderTeacherBanner() {
 
       ${state.teacherOverviewExpanded ? `
         <div class="teacher-overview-box">
-          <strong>Activity Overview — Lektion 1: Vetenskapsdetektiven (~40 min)</strong>
+          <strong>Välkomna till Lektion 1: Vetenskapsdetektiven! (ca 40 min)</strong>
           <p style="margin: 6px 0;">
-            Designed for <em>Bygg- och anläggning</em> students working in pairs to prepare for a small-group oral exam in Naturkunskap 1a1:
+            Idag jobbar ni i <strong>par</strong> och tränar tillsammans inför det <strong>muntliga provet i smågrupper</strong> om <em>Vetenskapligt arbetssätt</em> (Naturkunskap 1a1). Så här är lektionen upplagd:
           </p>
           <ul>
-            <li><strong>Accessibility & Pacing:</strong> Native Swedish TTS (<code>sv-SE</code>) on every prompt/feedback box + global Auto-read toggle, chunked 6–8 min stages, and zero overlap with actual test scenarios.</li>
-            <li><strong>Oral Rehearsal & Anti-Paste:</strong> Pairs complete spoken <em>Par-snack</em> checkpoints and a timed 5-question <em>Muntligt genrep</em>. Pasting is blocked in all text fields; final progress exports as a copy-ready summary for Google Classroom.</li>
-            <li><strong>Demo Controls:</strong> Click any stage button below to jump directly, or press <strong>Shift + F</strong> to step forward through questions and auto-fill demo answers. Press <strong>Shift + L</strong> anytime to hide this bar.</li>
+            <li><strong>Etapp 1 – Hypotes & Experiment (~7 min):</strong> Ni tränar på vad en hypotes är och hur man gör ett rättvist experiment + <em>Par-snack #1</em>.</li>
+            <li><strong>Etapp 2 – Naturvetenskap eller Pseudovetenskap? (~8 min):</strong> Ni avgör vilka påståenden som bygger på riktig vetenskap och vilka som saknar bevis.</li>
+            <li><strong>Etapp 3 – Källkritik på bygget (~8 min):</strong> Ni jämför en influencer på sociala medier med en granskad forskningsartikel + <em>Par-snack #2</em>.</li>
+            <li><strong>Etapp 4 – Medicinska genombrott & Forskningsfusk (~7 min):</strong> Ni repeterar viktiga medicinska upptäckter (sterilteknik, vaccin, antibiotika) och hur forskningsfusk avslöjas.</li>
+            <li><strong>Etapp 5 – Muntligt genrep (~6 min) + Valfri Bonus C/A:</strong> Ni övar högt på 5 riktiga provfrågor med timer och checklista.</li>
           </ul>
+          <p style="margin: 8px 0 0 0; color: #cbd5e1;">
+            <strong>💡 Tips innan ni börjar:</strong> Använd gärna <strong>🔊 Lyssna</strong>-knappen på uppgifterna, prata högt med er parkompis vid alla par-snack, och kopiera er färdiga sammanfattning till <strong>Google Classroom</strong> på slutet!
+          </p>
         </div>
       ` : ''}
 
-      <div style="font-size: 0.85rem; color: #c7d2fe; font-weight: 700;">Hoppa direkt till valfri etapp:</div>
+      <div style="font-size: 0.85rem; color: #c7d2fe; font-weight: 700;">Förhandsvisa en etapp för klassen:</div>
       <div class="teacher-nav-grid">
         ${stageMeta.map((m, idx) => `
           <button type="button" class="teacher-stage-btn ${state.stage === idx ? 'active' : ''}" onclick="jumpToStage(${idx})">
