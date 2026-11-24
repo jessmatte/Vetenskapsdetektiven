@@ -85,7 +85,7 @@
     }
 
     .header-inner {
-      max-width: 960px;
+      max-width: 980px;
       margin: 0 auto;
       display: flex;
       flex-wrap: wrap;
@@ -99,7 +99,7 @@
       align-items: center;
       gap: 10px;
       font-weight: 800;
-      font-size: 1.15rem;
+      font-size: 1.12rem;
       color: var(--accent);
     }
 
@@ -120,6 +120,38 @@
       flex-wrap: wrap;
     }
 
+    /* Level Segmented Switch */
+    .level-switch {
+      display: inline-flex;
+      background-color: var(--bg-card-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 3px;
+    }
+
+    .level-btn {
+      padding: 6px 11px;
+      font-size: 0.86rem;
+      font-weight: 800;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+    }
+
+    .level-btn.active-e {
+      background-color: var(--green-bg);
+      color: var(--green);
+      border-color: var(--green);
+    }
+
+    .level-btn.active-ca {
+      background-color: var(--purple-bg);
+      color: var(--purple);
+      border-color: var(--purple);
+    }
+
     .voice-select {
       background-color: var(--bg-card-alt);
       color: var(--text-main);
@@ -127,14 +159,14 @@
       border-radius: 8px;
       padding: 6px 10px;
       font-family: inherit;
-      font-size: 0.88rem;
+      font-size: 0.86rem;
       font-weight: 600;
-      max-width: 190px;
+      max-width: 175px;
       cursor: pointer;
     }
 
     .progress-wrap {
-      max-width: 960px;
+      max-width: 980px;
       margin: 8px auto 0;
     }
 
@@ -165,7 +197,7 @@
 
     /* Main Container */
     main {
-      max-width: 960px;
+      max-width: 980px;
       margin: 22px auto 64px;
       padding: 0 16px;
     }
@@ -304,7 +336,7 @@
       border: 1px solid var(--blue);
     }
 
-    /* Key Words Box (Begreppshjälp) */
+    /* Key Words Box (Begreppshjälp i E-läge) */
     .vocab-box {
       background-color: var(--blue-bg);
       border-left: 5px solid var(--blue);
@@ -330,6 +362,15 @@
 
     .vocab-box li {
       margin-bottom: 5px;
+    }
+
+    /* Question Clarification Helper */
+    .sub-clarify {
+      display: block;
+      font-size: 0.96rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-top: 4px;
     }
 
     /* Stacked Completed Answers */
@@ -708,16 +749,24 @@
       <span>Vetenskapsdetektiven</span>
     </div>
     <div class="top-controls">
+      <div class="level-switch" role="group" aria-label="Välj svårighetsnivå">
+        <button type="button" class="level-btn active-e" id="btnModeE" onclick="setLevelMode('E')">
+          🟢 E-nivå
+        </button>
+        <button type="button" class="level-btn" id="btnModeCA" onclick="setLevelMode('CA')">
+          🟣 C/A-nivå
+        </button>
+      </div>
       <select id="voiceSelect" class="voice-select" title="Välj röst för uppläsning" onchange="selectVoice(this.value)">
         <option value="">🗣️ Laddar röster...</option>
       </select>
       <button type="button" class="btn-tts" id="btnAutoTts" onclick="toggleAutoTts()">
         🔊 Auto-ljud: AV
       </button>
-      <button type="button" class="btn-secondary" style="padding: 7px 11px; font-size: 0.9rem;" onclick="stopSpeech()">
+      <button type="button" class="btn-secondary" style="padding: 7px 10px; font-size: 0.88rem;" onclick="stopSpeech()">
         ⏹ Stopp
       </button>
-      <button type="button" class="btn-secondary" id="btnTheme" style="padding: 7px 11px; font-size: 0.9rem;" onclick="toggleTheme()">
+      <button type="button" class="btn-secondary" id="btnTheme" style="padding: 7px 10px; font-size: 0.88rem;" onclick="toggleTheme()">
         🌙 Mörkt läge
       </button>
     </div>
@@ -902,7 +951,7 @@ function ttsButton(textToRead, label = "Lyssna") {
 }
 
 /* =========================================================
-   2. THEME TOGGLE (LJUST LÄGE DEFAULT)
+   2. THEME & LEVEL MODE TOGGLES
    ========================================================= */
 let isDarkMode = false;
 
@@ -913,6 +962,27 @@ function toggleTheme() {
   if (btn) {
     btn.textContent = isDarkMode ? '☀️ Ljust läge' : '🌙 Mörkt läge';
   }
+}
+
+function setLevelMode(mode) {
+  if (state.levelMode === mode) return;
+  state.levelMode = mode;
+  updateLevelButtons();
+  showToast(
+    mode === 'E'
+      ? "🟢 E-nivå vald: tydligare vardagsspråk och begreppshjälp."
+      : "🟣 C/A-nivå vald: fullständig vetenskaplig text och högre krav.",
+    true
+  );
+  render();
+}
+
+function updateLevelButtons() {
+  const btnE = document.getElementById('btnModeE');
+  const btnCA = document.getElementById('btnModeCA');
+  if (!btnE || !btnCA) return;
+  btnE.className = state.levelMode === 'E' ? 'level-btn active-e' : 'level-btn';
+  btnCA.className = state.levelMode === 'CA' ? 'level-btn active-ca' : 'level-btn';
 }
 
 /* =========================================================
@@ -967,10 +1037,11 @@ function insertStarter(textareaId, starterText) {
 }
 
 /* =========================================================
-   4. APP STATE & CURRICULUM DATA
+   4. APP STATE & DUAL-LEVEL CURRICULUM DATA (E vs C/A)
    ========================================================= */
 const state = {
-  stage: 0, // 0: Start, 1: Hypotes & Experiment, 2: Pseudo vs Naturvetenskap, 3: Källkritik, 4: Medicin & Fusk, 5: Muntligt Genrep, 6: Bonus C/A, 7: Sammanfattning
+  stage: 0, // 0: Start, 1: Hypotes & Experiment, 2: Pseudo vs Naturvetenskap, 3: Källkritik, 4: Medicin & Fusk, 5: Muntligt Genrep, 6: Fördjupning C/A, 7: Sammanfattning
+  levelMode: 'E', // 'E' (accessible) or 'CA' (original full wording & rigor)
   startTime: Date.now(),
   student1: '',
   student2: '',
@@ -980,14 +1051,14 @@ const state = {
   teacherMode: false,
   teacherOverviewExpanded: true,
 
-  // Stage 1: Hypotes & Experiment (with stacked history)
+  // Stage 1: Hypotes & Experiment
   s1Index: 0,
   s1Score: 0,
   s1History: [], // { prompt, chosenText, explanation }
   pair1Text: '',
   pair1Spoken: false,
 
-  // Stage 2: Pseudovetenskap vs Naturvetenskap (starts with Vocab Check!)
+  // Stage 2: Pseudovetenskap vs Naturvetenskap
   s2VocabDone: false,
   s2Index: 0,
   s2Score: 0,
@@ -1004,7 +1075,7 @@ const state = {
   pair2Text: '',
   pair2Spoken: false,
 
-  // Stage 4: Medicinska upptäckter & Forskningsfusk (with stacked history)
+  // Stage 4: Medicinska upptäckter & Forskningsfusk
   s4Index: 0,
   s4Score: 0,
   s4History: [], // { prompt, chosenText, explanation }
@@ -1017,7 +1088,7 @@ const state = {
   s5TimerVal: 45,
   s5TimerRunning: false,
 
-  // Stage 6: Optional C/A Bonus (Full C/A rigor preserved!)
+  // Stage 6: C/A Analysis (Optional in E-mode, Standard in C/A-mode)
   didBonus: false,
   caChoiceAnswered: false,
   caChoiceCorrect: false,
@@ -1031,14 +1102,14 @@ const stageMeta = [
   { name: "Etapp 1: Hypotes & Experiment", short: "Etapp 1: Hypotes", pct: 15, time: "~7 min" },
   { name: "Etapp 2: Vetenskap eller Pseudovetenskap?", short: "Etapp 2: Pseudo", pct: 32, time: "~8 min" },
   { name: "Etapp 3: Källkritik", short: "Etapp 3: Källkritik", pct: 50, time: "~8 min" },
-  { name: "Etapp 4: Medicin & Forskningsfusk", short: "Etapp 4: Medicin/Fusk", pct: 68, time: "~7 min" },
-  { name: "Etapp 5: Muntligt genrep (E-nivå)", short: "Etapp 5: Muntligt", pct: 84, time: "~6 min" },
-  { name: "Bonus-etapp: Sikta mot C/A", short: "Bonus C/A", pct: 94, time: "~4 min (Valfri)" },
+  { name: "Etapp 4: Medicinska genombrott & Forskningsfusk", short: "Etapp 4: Medicin/Fusk", pct: 68, time: "~7 min" },
+  { name: "Etapp 5: Muntligt genrep", short: "Etapp 5: Muntligt", pct: 84, time: "~6 min" },
+  { name: "Etapp 6: Fördjupning C/A", short: "Etapp 6: C/A", pct: 94, time: "~4 min" },
   { name: "Klar! Kopiera till Google Classroom", short: "Sammanfattning", pct: 100, time: "Färdig!" }
 ];
 
-// STAGE 1: Accurate scientific definition of hypothesis (statement about relationship between 2 factors based on observations/prior research, NOT a random guess or question)
-const s1Questions = [
+/* --- STAGE 1 DATA --- */
+const s1QuestionsE = [
   {
     badge: "Begrepps-koll • Fråga 1 av 5",
     prompt: "Vi börjar med begreppet HYPOTES. Vad är en vetenskaplig hypotes?",
@@ -1047,11 +1118,11 @@ const s1Questions = [
       { text: "En helt slumpvis gissning utan någon bakgrund eller tanke.", correct: false },
       { text: "En öppen fråga som slutar med ett frågetecken.", correct: false }
     ],
-    explanation: "Rätt! En hypotes är ett påstående (inte en fråga och inte en slumpvis gissning) om sambandet mellan två faktorer. Den bygger på observationer eller tidigare forskning/kunskap."
+    explanation: "Rätt! En hypotes är ett påstående (inte en fråga och inte en slumpvis gissning) om sambandet mellan två faktorer. Den bygger på observationer eller tidigare kunskap."
   },
   {
     badge: "Hypotes • Fråga 2 av 5",
-    prompt: "Utifrån tidigare studier om ljud och koncentration vill ni undersöka hur musik påverkar läsning. Vilket alternativ är en korrekt formulerad hypotes?",
+    prompt: "Utifrån tidigare observationer om ljud och koncentration vill ni testa hur musik påverkar läsning. Vilket alternativ är en korrekt hypotes?",
     options: [
       { text: "Hur påverkar klassisk musik elevers resultat på ett lästest?", correct: false },
       { text: "Klassisk musik förbättrar elevers resultat på ett lästest.", correct: true },
@@ -1060,65 +1131,118 @@ const s1Questions = [
     explanation: "Snyggt! ”Klassisk musik förbättrar elevers resultat på ett lästest” är ett tydligt påstående om sambandet mellan två faktorer (klassisk musik och läsresultat) som går att testa."
   },
   {
-    badge: "Vetenskapligt experiment • Fråga 3 av 5",
-    prompt: "Ni vill testa om en ny energidryck förbättrar reaktionsförmågan. Men gruppen som dricker energidryck får också sova 2 timmar mer. Varför är detta inte ett pålitligt vetenskapligt experiment?",
+    badge: "Krav på experiment • Fråga 3 av 5",
+    prompt: "Vad krävs för att en undersökning ska räknas som ett vetenskapligt experiment? Ni testar en energidryck, men gruppen som dricker den får också sova 2 timmar mer. Varför duger inte testet?",
     options: [
-      { text: "För att man ändrade TVÅ faktorer samtidigt (både dryck och sömn). Då vet man inte vilken faktor som gav effekten.", correct: true },
+      { text: "För att man ändrade TVÅ faktorer samtidigt (både dryck och sömn). I ett vetenskapligt experiment ändrar man bara EN faktor i taget.", correct: true },
       { text: "För att energidrycker smakar sött.", correct: false },
       { text: "För att man aldrig får testa drycker på människor.", correct: false }
     ],
-    explanation: "Helt rätt! Ett vetenskapligt experiment kännetecknas av att EN faktor förändras medvetet åt gången (medan allt annat hålls lika) så att man ser hur den påverkar en annan faktor."
+    explanation: "Helt rätt! Ett viktigt krav på ett vetenskapligt experiment är att man bara ändrar EN faktor i taget och håller allt annat lika."
   },
   {
-    badge: "Upprepbarhet • Fråga 4 av 5",
-    prompt: "Varför måste ett vetenskapligt experiment beskrivas tydligt steg för steg?",
+    badge: "Krav på experiment • Fråga 4 av 5",
+    prompt: "Vad mer krävs av ett vetenskapligt experiment? Varför måste man beskriva exakt steg för steg hur man gjorde?",
     options: [
-      { text: "Så att andra ska kunna upprepa försöket och kontrollera om de får samma resultat.", correct: true },
+      { text: "Så att andra ska kunna upprepa försöket och se om de får samma resultat.", correct: true },
       { text: "Så att texten ska bli så lång som möjligt.", correct: false },
       { text: "För att ingen annan ska få testa samma sak.", correct: false }
     ],
-    explanation: "Precis! Upprepbarhet gör en undersökning pålitlig: andra ska kunna göra om exakt samma försök och se om de får samma resultat."
+    explanation: "Precis! Ett vetenskapligt experiment måste gå att upprepa. Om andra gör exakt likadant ska de få samma resultat."
   },
   {
     badge: "Slutsats • Fråga 5 av 5",
-    prompt: "Om ett enda experiment visar att er hypotes verkar stämma – kan man då säga att hypotesen är 100 % bevisad för all framtid?",
+    prompt: "Om ett enda experiment visar att er hypotes verkar stämma – är den 100 % bevisad för all framtid då?",
     options: [
       { text: "Ja, ett enda försök räcker alltid som slutgiltigt bevis.", correct: false },
-      { text: "Nej, ett enstaka försök talar för att hypotesen stämmer, men det krävs upprepade studier för att dra säkra slutsatser.", correct: true },
+      { text: "Nej, ett enstaka försök talar för att hypotesen stämmer, men det krävs upprepade försök för att dra säkra slutsatser.", correct: true },
       { text: "Ja, om man lägger ut resultatet på sociala medier.", correct: false }
     ],
-    explanation: "Mitt i prick! En enstaka undersökning kan stödja hypotesen, men det krävs upprepade försök för att dra säkra slutsatser."
+    explanation: "Mitt i prick! En enstaka undersökning kan stödja hypotesen, men det krävs upprepade försök för att vara säker."
   }
 ];
 
-// STAGE 2: Everyday claims (no heavy trade jargon)
-const s2Items = [
+const s1QuestionsCA = [
+  {
+    badge: "Fråga 1 av 5 • Hypotes",
+    prompt: "Ni ska testa en ny rostskyddsfärg på armeringsjärn. Vilket av alternativen är en korrekt formulerad hypotes?",
+    options: [
+      { text: "Hur bra skyddar den nya färgen mot rost egentligen?", correct: false },
+      { text: "Armeringsjärn som målas med den nya färgen får mindre rost efter tre veckor i regn än omålade järn.", correct: true },
+      { text: "Jag tycker att röd rostskyddsfärg ser snyggare ut på bygget.", correct: false }
+    ],
+    explanation: "Rätt! En hypotes formuleras som ett testbart påstående (inte en fråga eller slumpvis gissning) om sambandet mellan två faktorer, grundat i observationer eller tidigare kunskap."
+  },
+  {
+    badge: "Fråga 2 av 5 • Hypotes",
+    prompt: "Vad kan en hypotes också vara, förutom ett påstående om vad som ska hända i ett experiment?",
+    options: [
+      { text: "En möjlig förklaring till vad något beror på (som går att testa utifrån observationer eller tidigare forskning).", correct: true },
+      { text: "Ett slutgiltigt bevis som aldrig kan ändras.", correct: false },
+      { text: "En lista på vilka verktyg som behövs i labbet.", correct: false }
+    ],
+    explanation: "Helt rätt! En hypotes är ett påstående om sambandet mellan två faktorer – antingen vad som kommer att hända i ett försök, eller en möjlig förklaring till vad något beror på."
+  },
+  {
+    badge: "Fråga 3 av 5 • Vetenskapligt experiment",
+    prompt: "Ett bygglag vill testa om en ny energidryck förbättrar reaktionsförmågan. De ger drycken till fem personer som också får sova två timmar extra. Varför är detta ett dåligt vetenskapligt experiment?",
+    options: [
+      { text: "För att energidrycker inte smakar gott.", correct: false },
+      { text: "För att de ändrade TVÅ faktorer samtidigt (både dryck och sömn), så man vet inte vilken faktor som gav effekten.", correct: true },
+      { text: "För att man aldrig får testa saker på människor.", correct: false }
+    ],
+    explanation: "Snyggt! Ett vetenskapligt experiment kännetecknas av att EN oberoende faktor förändras medvetet åt gången (medan övriga hålls konstanta) för att se hur den påverkar en annan faktor."
+  },
+  {
+    badge: "Fråga 4 av 5 • Vetenskapligt experiment",
+    prompt: "Varför måste ett vetenskapligt experiment beskrivas tydligt steg för steg?",
+    options: [
+      { text: "Så att någon annan ska kunna upprepa försöket och få samma resultat (reliabilitet och reproducerbarhet).", correct: true },
+      { text: "Så att rapporten blir så många sidor som möjligt.", correct: false },
+      { text: "För att ingen annan ska få testa samma sak.", correct: false }
+    ],
+    explanation: "Precis! Upprepbarhet är avgörande i naturvetenskap: andra ska kunna göra om exakt samma försök och se om de får samma resultat."
+  },
+  {
+    badge: "Fråga 5 av 5 • Slutsats & Hypotes",
+    prompt: "Om ett enda experiment visar att er hypotes verkar stämma – kan man då säga att hypotesen är 100 % bevisad för all framtid?",
+    options: [
+      { text: "Ja, ett experiment räcker alltid som slutgiltigt bevis.", correct: false },
+      { text: "Nej, ett enstaka försök talar för att hypotesen stämmer, men den kan inte anses helt bevisad av bara en undersökning.", correct: true },
+      { text: "Ja, om man skriver ut resultatet i en blogg.", correct: false }
+    ],
+    explanation: "Mitt i prick! En enstaka undersökning kan tala för att en hypotes stämmer, men det krävs upprepade studier för att dra säkra vetenskapliga slutsatser."
+  }
+];
+
+/* --- STAGE 2 DATA --- */
+const s2ItemsE = [
   {
     claim: "”Ett armband med magneter balanserar kroppens energifält och tar bort ryggvärk direkt.”",
     type: "pseudo",
     reasons: [
-      { text: "Det använder ord som låter vetenskapliga (’energifält’), men saknar kontrollerade studier och bevis.", correct: true },
+      { text: "Det använder ord som låter vetenskapliga (’energifält’), men saknar kontrollerade tester och bevis.", correct: true },
       { text: "Det har testats i stora kontrollerade experiment med tydliga mätvärden.", correct: false }
     ],
     feedback: "Pseudovetenskap! Ord som ’energifält’ låter tekniskt, men det finns inga vetenskapliga bevis eller kontrollerade studier bakom."
   },
   {
-    claim: "”Hörselskydd minskar risken för bestående hörselskador när man jobbar i högt buller.”",
+    claim: "”Hörselskydd minskar risken för hörselskador när man jobbar i högt buller.”",
     type: "science",
     reasons: [
       { text: "Ljudnivåer och hörsel kan mätas objektivt och testas om och om igen med upprepbara resultat.", correct: true },
       { text: "Det bygger bara på en enstaka persons magkänsla.", correct: false }
     ],
-    feedback: "Naturvetenskap! Ljudstyrka och hörsel går att mäta objektivt, och undersökningarna ger samma resultat när de upprepas."
+    feedback: "Naturvetenskap! Ljudstyrka och hörsel går att mäta objektivt, och testerna ger samma resultat när de upprepas."
   },
   {
     claim: "”Ditt stjärntecken avgör om du kommer att ha otur på jobbet idag.”",
     type: "pseudo",
     reasons: [
-      { text: "Astrologi och stjärntecken saknar vetenskapligt stöd och går inte att bevisa med pålitliga experiment.", correct: true },
+      { text: "Astrologi och stjärntecken saknar vetenskapligt stöd och går inte att testa med pålitliga experiment.", correct: true },
       { text: "Stjärnorna styr hur bra vi jobbar på tisdagar.", correct: false }
     ],
-    feedback: "Pseudovetenskap! Horoskop och astrologi är klassiska exempel på pseudovetenskap."
+    feedback: "Pseudovetenskap! Horoskop och astrologi är klassiska exempel på låtsas-vetenskap."
   },
   {
     claim: "”En tyngre hammare slår ner en spik med färre slag än en lätt hammare.”",
@@ -1140,14 +1264,114 @@ const s2Items = [
   }
 ];
 
-// STAGE 4: Medical breakthroughs & fraud
-const s4Cards = [
+const s2ItemsCA = [
+  {
+    claim: "”Ett koppararmband balanserar kroppens energifält och tar bort ryggont efter tunga lyft.”",
+    type: "pseudo",
+    reasons: [
+      { text: "Låter vetenskapligt (’energifält’), men saknar bevis och bygger bara på personliga berättelser.", correct: true },
+      { text: "Det har testats i stora kontrollerade experiment med tydliga mätvärden.", correct: false }
+    ],
+    feedback: "Pseudovetenskap! Ord som ’energifält’ låter tekniskt, men det finns inga vetenskapliga bevis eller kontrollerade experiment bakom."
+  },
+  {
+    claim: "”Våtkapning och punktutsug minskar mängden farligt kvartsdamm i luften med över 90 procent vid betongsågning.”",
+    type: "science",
+    reasons: [
+      { text: "Påståendet går att mäta, testa och upprepa i kontrollerade mätningar på arbetsplatser.", correct: true },
+      { text: "Det bygger på en enstaka persons magkänsla.", correct: false }
+    ],
+    feedback: "Naturvetenskap! Dammhalter kan mätas exakt, och försöket går att upprepa på olika byggen."
+  },
+  {
+    claim: "”Enligt ditt stjärntecken bör Vågar och Oxar undvika att klättra på stegar under fullmåne.”",
+    type: "pseudo",
+    reasons: [
+      { text: "Astrologi saknar vetenskapligt stöd och går inte att testa med pålitliga experiment.", correct: true },
+      { text: "Månens dragningskraft styr personligheten hos byggarbetare.", correct: false }
+    ],
+    feedback: "Pseudovetenskap! Horoskop och astrologi är klassiska exempel på pseudovetenskap."
+  },
+  {
+    claim: "”Ju högre vatten-cement-tal (vct) en betongblandning har, desto lägre blir tryckhållfastheten när betongen härdat.”",
+    type: "science",
+    reasons: [
+      { text: "Man kan ändra vattenmängden medvetet och mäta hållfastheten i en pressmaskin om och om igen.", correct: true },
+      { text: "Det går inte att motbevisa eller testa i verkligheten.", correct: false }
+    ],
+    feedback: "Naturvetenskap! Här ändrar man en faktor (vattenmängd) och mäter en annan faktor (hållfasthet) med upprepbara resultat."
+  },
+  {
+    claim: "”Det här detox-teet rensar ut alla gifter från avgaser och lösningsmedel ur kroppen på 24 timmar – tusentals nöjda kunder intygar!”",
+    type: "pseudo",
+    reasons: [
+      { text: "Bygger på reklampåståenden och anekdoter (’nöjda kunder’) i stället för granskade studier.", correct: true },
+      { text: "Det är publicerat i en kollegialt granskad medicinsk tidskrift.", correct: false }
+    ],
+    feedback: "Pseudovetenskap! ’Nöjda kunder’ är personliga upplevelser, inte ett vetenskapligt experiment."
+  },
+  {
+    claim: "”Användning av klassade hörselskydd vid buller över 85 decibel minskar risken för bestående hörselskador.”",
+    type: "science",
+    reasons: [
+      { text: "Bygger på upprepade ljudmätningar och medicinska hörseltester över lång tid.", correct: true },
+      { text: "Det går inte att mäta ljudnivåer eller hörsel.", correct: false }
+    ],
+    feedback: "Naturvetenskap! Ljudstyrka och hörsel kan mätas objektivt och upprepas i studier."
+  }
+];
+
+/* --- STAGE 4 DATA --- */
+const s4CardsE = [
+  {
+    category: "Medicinsk upptäckt",
+    prompt: "Förr dog många patienter efter operationer av blodförgiftning eftersom läkare inte tvättade händer eller rengjorde verktygen. Vilken upptäckt löste det?",
+    options: [
+      { text: "Sterilteknik (rengöring av händer, sår och verktyg för att stoppa bakterier).", correct: true },
+      { text: "Magnetarmband.", correct: false },
+      { text: "Sockerpiller.", correct: false }
+    ],
+    explanation: "Rätt! Sterilteknik minskade infektioner vid operationer och räddade miljontals liv."
+  },
+  {
+    category: "Medicinsk upptäckt",
+    prompt: "Vilka två andra medicinska upptäckter (förutom sterilteknik) gör att människor lever mycket längre idag?",
+    options: [
+      { text: "Vaccin (som skyddar mot farliga infektionssjukdomar) och antibiotika (medicin som botar bakterieinfektioner).", correct: true },
+      { text: "Horoskop och detox-te.", correct: false },
+      { text: "Energidryck och vitaminvatten.", correct: false }
+    ],
+    explanation: "Helt rätt! Sterilteknik, vaccin och antibiotika är tre viktiga medicinska upptäckter."
+  },
+  {
+    category: "Forskningsfusk",
+    prompt: "Vad betyder begreppet FORSKNINGSFUSK?",
+    options: [
+      { text: "Att plagiera (kopiera) andras texter, eller att medvetet förfalska eller gömma forskningsresultat.", correct: true },
+      { text: "Att göra om ett experiment för att dubbelkolla svaret.", correct: false },
+      { text: "Att komma fram till att ens egen hypotes inte stämde.", correct: false }
+    ],
+    explanation: "Precis! Att ha fel i sin hypotes är helt normalt i vetenskap. Men att hitta på siffror, dölja resultat eller kopiera andras arbete är forskningsfusk."
+  },
+  {
+    category: "Avslöja fusk",
+    prompt: "1998 publicerades en falsk artikel som påstod att vaccin orsakar autism. Hur avslöjades fusket?",
+    options: [
+      { text: "Andra forskare granskade studien och gjorde om testerna – då såg de att siffrorna var förfalskade.", correct: true },
+      { text: "En bloggare gissade att det var fel.", correct: false },
+      { text: "Fusket avslöjades aldrig.", correct: false }
+    ],
+    explanation: "Mitt i prick! När andra forskare granskar och upprepar ett försök avslöjas fusk."
+  }
+];
+
+const s4CardsCA = [
   {
     category: "Medicinsk upptäckt",
     prompt: "Förr dog många patienter efter operationer av blodförgiftning eftersom läkare inte tvättade händer eller rengjorde instrument. Vilken medicinsk upptäckt löste detta?",
     options: [
       { text: "Sterilteknik (rengöring av händer, sår och instrument för att stoppa bakterier).", correct: true },
-      { text: "Magnetarmband.", correct: false },
+      { text: "Kall fusion.", correct: false },
       { text: "Homeopatiska sockerpiller.", correct: false }
     ],
     explanation: "Rätt! Sterilteknik minskade infektioner dramatiskt vid operationer och förlossningar och räddade miljontals liv."
@@ -1157,37 +1381,38 @@ const s4Cards = [
     prompt: "Vilka två andra medicinska upptäckter (förutom sterilteknik) har kraftigt förbättrat människors levnadsvillkor och medellivslängd?",
     options: [
       { text: "Vaccin (som förebygger farliga infektionssjukdomar) och antibiotika (som botar bakterieinfektioner).", correct: true },
-      { text: "Horoskop och detox-te.", correct: false },
-      { text: "Energidryck och vitaminvatten.", correct: false }
+      { text: "Magnetarmband och kristallterapi.", correct: false },
+      { text: "Astrologi och alkemi.", correct: false }
     ],
-    explanation: "Helt rätt! Sterilteknik, vaccin och antibiotika är tre viktiga medicinska upptäckter som förbättrat människors levnadsvillkor."
+    explanation: "Helt rätt! Sterilteknik, vaccin och antibiotika är tre klockrena exempel på medicinska upptäckter som förbättrat människors levnadsvillkor."
   },
   {
     category: "Forskningsfusk",
     prompt: "Vad räknas som forskningsfusk?",
     options: [
       { text: "Att plagiera andras texter, eller att medvetet förfalska eller undanhålla forskningsresultat.", correct: true },
-      { text: "Att göra om ett experiment för att kontrollera om resultatet stämmer.", correct: false },
-      { text: "Att komma fram till att ens egen hypotes inte stämde.", correct: false }
+      { text: "Att göra om ett experiment för att se om resultatet stämmer.", correct: false },
+      { text: "Att komma fram till att ens egen hypotes var fel.", correct: false }
     ],
-    explanation: "Precis! Att ha fel i sin hypotes är helt normalt i vetenskap. Men att hitta på data, dölja resultat eller plagiera (kopiera) andras arbete är forskningsfusk."
+    explanation: "Precis! Att ha fel i sin hypotes är helt normalt i vetenskap – men att hitta på, ändra, dölja resultat eller kopiera andras arbete (plagiera) är forskningsfusk."
   },
   {
-    category: "Avslöja fusk",
+    category: "Exempel på forskningsfusk",
     prompt: "1998 publicerades en ökänd artikel som påstod att MPR-vaccin orsakar autism. Hur avslöjades fusket?",
     options: [
-      { text: "Forskaren hade förfalskat data, och när andra forskare granskade och upprepade studien fick de inte samma resultat.", correct: true },
+      { text: "Forskaren hade förfalskat data, och när andra forskare upprepade studien fick de inte alls samma resultat.", correct: true },
       { text: "En bloggare gissade att det var fel.", correct: false },
-      { text: "Fusket avslöjades aldrig utan gäller fortfarande.", correct: false }
+      { text: "Det avslöjades aldrig utan gäller fortfarande.", correct: false }
     ],
-    explanation: "Mitt i prick! Den falska artikeln (och exempelvis ’kall fusion’) avslöjades när andra forskare granskade metoden och försökte upprepa försöken."
+    explanation: "Mitt i prick! Den falska autism-artikeln (och exempelvis ’kall fusion’) är kända fall av forskningsfusk som avslöjades när andra forskare granskade och försökte upprepa försöken."
   }
 ];
 
-// STAGE 5: Clear E-level exam questions
-const s5Questions = [
+/* --- STAGE 5 ORAL EXAM QUESTIONS --- */
+const s5QuestionsE = [
   {
     q: "1. Vad är en hypotes?",
+    sub: "",
     checklist: [
       "Ett testbart påstående (inte en fråga och inte en slumpvis gissning) om hur två faktorer hänger ihop.",
       "Bygger på observationer eller tidigare kunskap/forskning.",
@@ -1196,13 +1421,16 @@ const s5Questions = [
   },
   {
     q: "2. Vad kännetecknar ett vetenskapligt experiment?",
+    sub: "(Vad krävs för att en undersökning ska räknas som ett riktigt vetenskapligt experiment?)",
     checklist: [
-      "Man förändrar EN faktor medvetet åt gången (håller allt annat lika) för att undersöka hur den påverkar en annan faktor.",
-      "Försöket beskrivs så tydligt att någon annan kan upprepa det och få samma resultat."
+      "1) Man ändrar bara EN faktor medvetet åt gången (och håller allt annat lika).",
+      "2) Man mäter eller observerar hur den andra faktorn påverkas.",
+      "3) Försöket beskrivs så tydligt att någon annan kan upprepa det och få samma resultat."
     ]
   },
   {
-    q: "3. Vad menas med att vara källkritisk? Varför väger en vetenskaplig artikel tyngre än en blogg?",
+    q: "3. Vad menas med att någon är källkritisk, och varför väger en vetenskaplig artikel tyngre än en blogg?",
+    sub: "",
     checklist: [
       "Källkritisk = att bedöma tillförlitligheten i det man läser och hör (vem står bakom och går det att lita på?).",
       "Vetenskaplig artikel: bygger på vetenskaplig metod/experiment OCH är granskad av andra forskare före publicering.",
@@ -1211,16 +1439,62 @@ const s5Questions = [
   },
   {
     q: "4. Hur skiljer man mellan naturvetenskap och pseudovetenskap?",
+    sub: "",
     checklist: [
       "Naturvetenskap: bygger på testbara hypoteser, kontrollerade experiment och upprepbara resultat.",
-      "Pseudovetenskap: 'låtsas-vetenskap' som använder vetenskapliga ord men saknar bevis och bygger ofta på enstaka personliga berättelser."
+      "Pseudovetenskap: ’låtsas-vetenskap’ som använder vetenskapliga ord men saknar bevis och bygger ofta på enstaka personliga berättelser."
     ]
   },
   {
     q: "5. Ge exempel på en medicinsk upptäckt som förbättrat levnadsvillkoren, samt ett exempel på forskningsfusk.",
+    sub: "",
     checklist: [
       "Medicinsk upptäckt: t.ex. vaccin, antibiotika eller sterilteknik.",
       "Forskningsfusk: att plagiera, förfalska eller undanhålla resultat (t.ex. den falska artikeln om vaccin och autism)."
+    ]
+  }
+];
+
+const s5QuestionsCA = [
+  {
+    q: "1. Vad är en hypotes?",
+    sub: "",
+    checklist: [
+      "Ett testbart påstående (inte en fråga eller slumpvis gissning) om sambandet mellan två faktorer, grundat i observationer eller tidigare forskning.",
+      "ELLER en möjlig förklaring till vad något beror på (som går att testa)."
+    ]
+  },
+  {
+    q: "2. Vad kännetecknar ett vetenskapligt experiment?",
+    sub: "(Vilka krav måste uppfyllas för att en undersökning ska vara vetenskapligt pålitlig?)",
+    checklist: [
+      "Man förändrar EN faktor medvetet åt gången (och kontrollerar övriga faktorer) för att undersöka hur den påverkar en annan faktor.",
+      "Försöket beskrivs så tydligt att någon annan kan upprepa det och få samma resultat (reproducerbarhet/reliabilitet)."
+    ]
+  },
+  {
+    q: "3. Vad menas med att någon är källkritisk, och varför väger en vetenskaplig artikel tyngre än en blogg?",
+    sub: "",
+    checklist: [
+      "Källkritisk = att bedöma tillförlitligheten i det man läser och hör.",
+      "Vetenskaplig artikel: bygger på vetenskaplig metod/experiment OCH är kollegialt granskad av andra forskare före publicering.",
+      "Blogg/sociala medier: saknar granskning och kan styras av personliga, ekonomiska eller politiska intressen."
+    ]
+  },
+  {
+    q: "4. Hur skiljer man mellan naturvetenskap och pseudovetenskap?",
+    sub: "",
+    checklist: [
+      "Naturvetenskap: bygger på testbara hypoteser, kontrollerade experiment och upprepbara resultat.",
+      "Pseudovetenskap: använder vetenskapliga ord men saknar bevis, går inte att testa/motbevisa och bygger ofta på enstaka personliga historier."
+    ]
+  },
+  {
+    q: "5. Ge exempel på en medicinsk upptäckt som förbättrat levnadsvillkoren, samt ett exempel på forskningsfusk.",
+    sub: "",
+    checklist: [
+      "Medicinsk upptäckt: t.ex. vaccin, antibiotika eller sterilteknik.",
+      "Forskningsfusk: att plagiera, förfalska eller undanhålla resultat (t.ex. den falska artikeln om vaccin och autism, eller kall fusion)."
     ]
   }
 ];
@@ -1265,6 +1539,7 @@ function jumpToStage(targetStage) {
 function demoForwardStep() {
   if (!state.student1) state.student1 = "Exempel-Elev 1";
   if (!state.student2) state.student2 = "Exempel-Elev 2";
+  const isCA = state.levelMode === 'CA';
 
   if (state.stage === 0) {
     if (!state.classGroup) state.classGroup = "BA23A";
@@ -1274,12 +1549,13 @@ function demoForwardStep() {
   }
 
   if (state.stage === 1) {
-    if (state.s1Index < s1Questions.length) {
-      const correctIdx = s1Questions[state.s1Index].options.findIndex(o => o.correct);
+    const qList = isCA ? s1QuestionsCA : s1QuestionsE;
+    if (state.s1Index < qList.length) {
+      const correctIdx = qList[state.s1Index].options.findIndex(o => o.correct);
       answerS1(correctIdx);
     } else {
       if (!state.pair1Text || state.pair1Text.length < 15) {
-        state.pair1Text = "En hypotes är ett testbart påstående om hur två faktorer hänger ihop, baserat på observationer eller tidigare kunskap. Ett vetenskapligt experiment ändrar en faktor i taget och kan upprepas.";
+        state.pair1Text = "En hypotes är ett testbart påstående om sambandet mellan två faktorer, baserat på observationer eller tidigare kunskap. Ett vetenskapligt experiment ändrar en faktor i taget och kan upprepas.";
       }
       state.pair1Spoken = true;
       state.stage = 2;
@@ -1289,10 +1565,11 @@ function demoForwardStep() {
   }
 
   if (state.stage === 2) {
-    if (!state.s2VocabDone) {
+    const items = isCA ? s2ItemsCA : s2ItemsE;
+    if (!isCA && !state.s2VocabDone && state.s2History.length === 0) {
       answerS2Vocab(true);
-    } else if (state.s2Index < s2Items.length) {
-      const item = s2Items[state.s2Index];
+    } else if (state.s2Index < items.length) {
+      const item = items[state.s2Index];
       if (state.s2Step === 'classify') {
         chooseS2Type(item.type);
       } else {
@@ -1314,7 +1591,7 @@ function demoForwardStep() {
       checkS3Reasons();
     } else {
       if (!state.pair2Text || state.pair2Text.length < 15) {
-        state.pair2Text = "1. Den vetenskapliga artikeln bygger på ett kontrollerat test på 300 personer. 2. Andra oberoende forskare har granskat artikeln och den saknar vinstintresse.";
+        state.pair2Text = "1. Den vetenskapliga artikeln bygger på vetenskaplig metod och experiment. 2. Den är granskad av andra oberoende forskare och saknar ekonomiska intressen.";
       }
       state.pair2Spoken = true;
       state.stage = 4;
@@ -1324,8 +1601,9 @@ function demoForwardStep() {
   }
 
   if (state.stage === 4) {
-    if (state.s4Index < s4Cards.length) {
-      const correctIdx = s4Cards[state.s4Index].options.findIndex(o => o.correct);
+    const cards = isCA ? s4CardsCA : s4CardsE;
+    if (state.s4Index < cards.length) {
+      const correctIdx = cards[state.s4Index].options.findIndex(o => o.correct);
       answerS4(correctIdx);
     } else {
       state.stage = 5;
@@ -1348,7 +1626,7 @@ function demoForwardStep() {
       answerCaChoice(true);
     } else {
       if (!state.caText || state.caText.length < 10) {
-        state.caText = "Om andra oberoende forskare kan upprepa experimentet kan man avslöja forskningsfusk eller slumpfel och se om resultatet är tillförlitligt.";
+        state.caText = "Om andra forskare upprepar experimentet kan man avslöja forskningsfusk eller slumpfel och se om resultatet verkligen stämmer.";
       }
       state.didBonus = true;
       state.stage = 7;
@@ -1365,13 +1643,13 @@ function demoForwardStep() {
 function renderTeacherBanner() {
   if (!state.teacherMode) return '';
 
-  const overviewSpeech = "Välkomna till Lektion 1: Vetenskapsdetektiven! Idag jobbar ni i par i cirka 40 minuter och tränar inför det muntliga provet. Lektionen har fem etapper: 1. Hypotes och experiment. 2. Naturvetenskap eller pseudovetenskap. 3. Källkritik. 4. Medicin och forskningsfusk. 5. Muntligt genrep samt en valfri bonus på C och A-nivå. Använd gärna Lyssna-knappen och kopiera er sammanfattning till Google Classroom när ni är klara!";
+  const overviewSpeech = "Välkomna till Lektion 1: Vetenskapsdetektiven! Idag jobbar ni i par i cirka 40 minuter och tränar inför det muntliga provet. Ni kan välja mellan E-nivå och C och A-nivå längst upp i menyn. Använd gärna Lyssna-knappen och kopiera er sammanfattning till Google Classroom när ni är klara!";
 
   return `
     <div class="teacher-panel">
       <div class="teacher-panel-top">
         <div class="teacher-title">
-          <span>📋 GENOMGÅNG & LEKTIONSÖVERSIKT • Lektion 1 av 3</span>
+          <span>📋 GENOMGÅNG & LEKTIONSÖVERSIKT • Lektion 1 av 3 (${state.levelMode === 'CA' ? '🟣 C/A-nivå' : '🟢 E-nivå'})</span>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           ${ttsButton(overviewSpeech, "Läs upp översikten")}
@@ -1391,17 +1669,17 @@ function renderTeacherBanner() {
         <div class="teacher-overview-box">
           <strong>Välkomna till Lektion 1: Vetenskapsdetektiven! (ca 40 min)</strong>
           <p style="margin: 6px 0;">
-            Idag jobbar ni i <strong>par</strong> och tränar tillsammans inför det <strong>muntliga provet</strong> i Naturkunskap 1a1:
+            Idag jobbar ni i <strong>par</strong> och tränar tillsammans inför det <strong>muntliga provet</strong> i Naturkunskap 1a1. Längst upp kan ni växla mellan <strong>🟢 E-nivå</strong> (mer begreppsstöd och vardagsexempel) och <strong>🟣 C/A-nivå</strong> (originaltext och fördjupad nivå).
           </p>
           <ul style="margin: 6px 0; padding-left: 20px;">
-            <li><strong>Etapp 1 – Hypotes & Experiment:</strong> Vad en hypotes är (ett påstående om sambandet mellan två faktorer) och vad som kännetecknar ett vetenskapligt experiment + <em>Par-snack #1</em>.</li>
-            <li><strong>Etapp 2 – Naturvetenskap eller Pseudovetenskap?:</strong> Vad pseudovetenskap betyder och hur man skiljer det från riktig vetenskap.</li>
+            <li><strong>Etapp 1 – Hypotes & Experiment:</strong> Vad en hypotes är (ett testbart påstående om sambandet mellan två faktorer) och vad som kännetecknar ett vetenskapligt experiment + <em>Par-snack #1</em>.</li>
+            <li><strong>Etapp 2 – Naturvetenskap eller Pseudovetenskap?:</strong> Skilj riktig vetenskap från påståenden utan bevis.</li>
             <li><strong>Etapp 3 – Källkritik:</strong> Jämför ett inlägg på sociala medier med en granskad forskningsartikel + <em>Par-snack #2</em>.</li>
-            <li><strong>Etapp 4 – Medicin & Forskningsfusk:</strong> Viktiga medicinska upptäckter och hur fusk avslöjas.</li>
-            <li><strong>Etapp 5 – Muntligt genrep + Valfri Bonus C/A:</strong> Öva högt på 5 provfrågor med timer.</li>
+            <li><strong>Etapp 4 – Medicinska genombrott & Forskningsfusk:</strong> Viktiga medicinska upptäckter (sterilteknik, vaccin, antibiotika) och hur forskningsfusk avslöjas.</li>
+            <li><strong>Etapp 5 – Muntligt genrep + Etapp 6 C/A:</strong> Öva högt på 5 provfrågor med timer och checklista.</li>
           </ul>
           <p style="margin: 8px 0 0 0; color: #cbd5e1;">
-            <strong>💡 Tips:</strong> Era tidigare svar ligger kvar ovanför varje uppgift så ni kan skrolla upp och titta på dem!
+            <strong>💡 Tips:</strong> Era klara svar ligger kvar ovanför varje uppgift så ni kan skrolla upp och använda dem som stöd!
           </p>
         </div>
       ` : ''}
@@ -1426,6 +1704,7 @@ function updateHeader() {
   document.getElementById('stageLabel').textContent = meta.name;
   document.getElementById('timeEstimate').textContent = meta.time;
   document.getElementById('progressBar').style.width = meta.pct + '%';
+  updateLevelButtons();
 }
 
 function render() {
@@ -1459,7 +1738,7 @@ function render() {
 
 /* --- STAGE 0: START --- */
 function renderStart() {
-  const introText = "Välkomna till Vetenskapsdetektiven! Ni ska jobba i par i cirka 40 minuter och träna inför det muntliga provet. Använd gärna Lyssna-knappen uppe till höger på varje uppgift.";
+  const introText = "Välkomna till Vetenskapsdetektiven! Ni ska jobba i par i cirka 40 minuter för att träna inför det muntliga provet i Naturkunskap 1a1. Välj om ni vill börja på E-nivå eller C och A-nivå, skriv in era namn och klicka på Starta Etapp 1.";
   return `
     <div class="card">
       <div class="card-header-row">
@@ -1470,21 +1749,35 @@ function renderStart() {
         ${ttsButton(introText, "Lyssna")}
       </div>
       <p data-autoread="${escapeHtml(introText)}">
-        Idag tränar ni i <strong>par</strong> inför det <strong>muntliga provet</strong> i Naturkunskap 1a1.
+        Under den här lektionen (ca 40 min) tränar ni tillsammans inför det <strong>muntliga provet i smågrupper</strong> om <em>Vetenskapligt arbetssätt</em>.
       </p>
       <ul>
-        <li><strong>Lätt att följa:</strong> Era rätta svar sparas kvar ovanför varje ny fråga. Ni kan alltid skrolla upp och läsa dem som stöd!</li>
-        <li><strong>Lyssna på texten:</strong> Klicka på <strong>🔊 Lyssna</strong> om ni vill få uppgiften uppläst.</li>
-        <li><strong>Inlämning på slutet:</strong> När ni är klara får ni en färdig sammanfattning att klistra in i <strong>Google Classroom</strong>.</li>
+        <li><strong>Välj nivå:</strong> Ni kan när som helst byta mellan <strong>🟢 E-nivå</strong> (mer begreppsstöd och vardagsexempel) och <strong>🟣 C/A-nivå</strong> (originaltext och fördjupad analys) längst upp.</li>
+        <li><strong>Svar som stöd:</strong> Era klara svar ligger kvar ovanför nästa fråga så ni alltid kan skrolla upp och titta tillbaka.</li>
+        <li><strong>Inlämning på slutet:</strong> När ni är klara skapar appen en färdig sammanfattning som ni klistrar in i ert delade dokument i <strong>Google Classroom</strong>.</li>
       </ul>
 
-      <div style="background: var(--bg-card-alt); padding: 18px; border-radius: 12px; border: 1px solid var(--border); margin: 20px 0;">
-        <h3>1. Skriv in era namn</h3>
+      <div style="background: var(--bg-card-alt); padding: 18px; border-radius: 12px; border: 1px solid var(--border); margin: 18px 0;">
+        <h3>1. Välj startnivå</h3>
+        <div class="options-grid two-col">
+          <button type="button" class="option-btn ${state.levelMode === 'E' ? 'correct' : ''}" onclick="setLevelMode('E')">
+            🟢 <strong>E-nivå</strong><br/>
+            <span style="font-size: 0.92rem; font-weight: 500; color: var(--text-muted);">Tydliga vardagsexempel, begrepps-rutor och meningsstarter.</span>
+          </button>
+          <button type="button" class="option-btn ${state.levelMode === 'CA' ? 'selected' : ''}" onclick="setLevelMode('CA')">
+            🟣 <strong>C/A-nivå</strong><br/>
+            <span style="font-size: 0.92rem; font-weight: 500; color: var(--text-muted);">Originaltext med byggexempel och full vetenskaplig fördjupning.</span>
+          </button>
+        </div>
+      </div>
+
+      <div style="background: var(--bg-card-alt); padding: 18px; border-radius: 12px; border: 1px solid var(--border); margin: 18px 0;">
+        <h3>2. Skriv in era namn</h3>
         <div class="no-paste-badge">✍️ Skriv era namn nedan</div>
         <label for="inpS1">Elev 1 (För- och efternamn):</label>
         <input type="text" id="inpS1" placeholder="T.ex. Alex Andersson" value="${escapeHtml(state.student1)}" />
 
-        <label for="inpS2">Elev 2 (För- och efternamn – eller skriv 'Ensam'):</label>
+        <label for="inpS2">Elev 2 (För- och efternamn – eller skriv 'Ensam' om ni är udda antal):</label>
         <input type="text" id="inpS2" placeholder="T.ex. Samira Lind" value="${escapeHtml(state.student2)}" />
 
         <label for="inpClass">Klass / Grupp (valfritt):</label>
@@ -1492,8 +1785,8 @@ function renderStart() {
       </div>
 
       <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
-        <button type="button" class="btn-secondary" data-tts="Hej! Ljudet fungerar bra. Ni kan också byta röst i menyn längst upp om ni vill." onclick="speakFromBtn(this)">
-          🔊 Testa ljudet
+        <button type="button" class="btn-secondary" data-tts="Hej! Ljudet fungerar perfekt på er Chromebook. Ni kan också byta röst i menyn längst upp." onclick="speakFromBtn(this)">
+          🔊 Testa ljudet på Chromebooken
         </button>
         <button type="button" class="btn-primary" onclick="startApp()">
           Starta Etapp 1 →
@@ -1520,9 +1813,11 @@ function startApp() {
   render();
 }
 
-/* --- STAGE 1: HYPOTES & EXPERIMENT (STACKED ANSWERS) --- */
+/* --- STAGE 1: HYPOTES & EXPERIMENT (STACKED ANSWERS + BOTH MODES) --- */
 function renderStage1() {
-  const vocabAudio = "Viktiga begrepp i Etapp 1: Hypotes är ett testbart påstående, inte en fråga och inte en slumpvis gissning, om hur två faktorer hänger ihop. Den bygger på observationer eller tidigare kunskap. Exempel: Klassisk musik förbättrar elevers resultat på ett lästest. Vetenskapligt experiment är en undersökning där man ändrar en faktor i taget och beskriver testet tydligt så att andra kan upprepa det.";
+  const isCA = state.levelMode === 'CA';
+  const qList = isCA ? s1QuestionsCA : s1QuestionsE;
+  const vocabAudio = "Viktiga begrepp i Etapp 1: Hypotes är ett testbart påstående, inte en fråga och inte en slumpvis gissning, om sambandet mellan två faktorer. Den bygger på observationer eller tidigare kunskap. Exempel: Klassisk musik förbättrar elevers resultat på ett lästest. Vetenskapligt experiment är en undersökning där man ändrar en faktor i taget, mäter hur en annan faktor påverkas och beskriver försöket så tydligt att andra kan upprepa det.";
 
   let historyHtml = '';
   if (state.s1History.length > 0) {
@@ -1541,15 +1836,15 @@ function renderStage1() {
   }
 
   let currentPartHtml = '';
-  if (state.s1Index < s1Questions.length) {
-    const q = s1Questions[state.s1Index];
+  if (state.s1Index < qList.length) {
+    const q = qList[state.s1Index];
     const fullAudio = `${q.prompt}. Alternativ 1: ${q.options[0].text}. Alternativ 2: ${q.options[1].text}. Alternativ 3: ${q.options[2].text}.`;
 
     currentPartHtml = `
       <div class="active-question-box">
         <div class="card-header-row">
           <div>
-            <span class="tag tag-e">${escapeHtml(q.badge)}</span>
+            <span class="tag ${isCA ? 'tag-ca' : 'tag-e'}">${isCA ? 'C/A-nivå' : 'E-nivå'} • ${escapeHtml(q.badge)}</span>
             <p style="font-size: 1.15rem; font-weight: 700; margin: 4px 0 0 0;" data-autoread="${escapeHtml(fullAudio)}">
               ${escapeHtml(q.prompt)}
             </p>
@@ -1567,32 +1862,39 @@ function renderStage1() {
       </div>
     `;
   } else {
-    const pairPrompt = "Par-snack 1: Titta på era rätta svar här ovanför. Berätta högt för varandra: 1. Vad är en hypotes? 2. Vad kännetecknar ett vetenskapligt experiment? Skriv sedan ner ert svar i rutan.";
+    const pairPrompt = "Par-snack 1: Turas om att förklara högt för varandra med egna ord. 1. Vad är en hypotes? 2. Vad kännetecknar ett vetenskapligt experiment? Alltså: vad krävs för att en undersökning ska räknas som ett riktigt vetenskapligt experiment? Skriv sedan ner ert gemensamma svar i rutan.";
     currentPartHtml = `
       <div class="pair-box">
         <div class="card-header-row">
           <div>
-            <span class="tag tag-pair">🗣️ Par-snack #1 • Träna inför provet</span>
+            <span class="tag tag-pair">🗣️ Par-snack #1 • Träna inför muntliga provet</span>
             <h3>Förklara högt för varandra!</h3>
           </div>
           ${ttsButton(pairPrompt, "Lyssna")}
         </div>
         <p data-autoread="${escapeHtml(pairPrompt)}">
-          Titta på era klara svar här ovanför och berätta högt för varandra:
+          På provet ska ni kunna förklara begreppen muntligt. Titta på era svar ovanför och gör så här nu:
         </p>
         <ol>
-          <li><strong>${escapeHtml(state.student1)}</strong> säger högt: <em>”Vad är en hypotes?”</em></li>
-          <li><strong>${escapeHtml(state.student2)}</strong> säger högt: <em>”Vad kännetecknar ett vetenskapligt experiment?”</em></li>
+          <li>
+            <strong>${escapeHtml(state.student1)}</strong> förklarar högt: <em>”Vad är en hypotes?”</em>
+          </li>
+          <li>
+            <strong>${escapeHtml(state.student2)}</strong> förklarar högt: <em>”Vad kännetecknar ett vetenskapligt experiment?”</em>
+            <span class="sub-clarify">(Vad krävs för att en undersökning ska räknas som ett riktigt vetenskapligt experiment?)</span>
+          </li>
         </ol>
 
         <div class="no-paste-badge">🚫 Klistra in är avstängt – skriv med era egna ord</div>
-        <label for="txtPair1">Skriv ner en kort sammanfattning av era två förklaringar:</label>
-        <div class="starter-chips">
-          <button type="button" class="chip-btn" onclick="insertStarter('txtPair1', 'En hypotes är ett testbart påstående om hur två faktorer hänger ihop. Ett vetenskapligt experiment kännetecknas av att ')">
-            + Starta meningen åt oss
-          </button>
-        </div>
-        <textarea id="txtPair1" class="no-paste" rows="3" placeholder="En hypotes är... Ett vetenskapligt experiment kännetecknas av att...">${escapeHtml(state.pair1Text)}</textarea>
+        <label for="txtPair1">Skriv en kort sammanfattning av era två förklaringar (sparas till Classroom):</label>
+        ${!isCA ? `
+          <div class="starter-chips">
+            <button type="button" class="chip-btn" onclick="insertStarter('txtPair1', 'En hypotes är ett testbart påstående om sambandet mellan två faktorer. Ett vetenskapligt experiment kännetecknas av att ')">
+              + Starta meningen åt oss
+            </button>
+          </div>
+        ` : ''}
+        <textarea id="txtPair1" class="no-paste" rows="4" placeholder="En hypotes är... Ett vetenskapligt experiment kännetecknas av att...">${escapeHtml(state.pair1Text)}</textarea>
 
         <label class="checkbox-row">
           <input type="checkbox" id="chkPair1" ${state.pair1Spoken ? 'checked' : ''} />
@@ -1611,22 +1913,24 @@ function renderStage1() {
     <div class="card">
       <div class="card-header-row">
         <div>
-          <span class="tag tag-e">E-nivå • Etapp 1 av 5</span>
+          <span class="tag ${isCA ? 'tag-ca' : 'tag-e'}">${isCA ? '🟣 C/A-nivå' : '🟢 E-nivå'} • Etapp 1 av 5</span>
           <h2>Hypotes & Vetenskapligt experiment</h2>
         </div>
-        <span style="font-weight: 700; color: var(--text-muted);">${state.s1History.length} / ${s1Questions.length} klara</span>
+        <span style="font-weight: 700; color: var(--text-muted);">${state.s1History.length} / ${qList.length} klara</span>
       </div>
 
-      <div class="vocab-box">
-        <div class="vocab-box-title">
-          <span>🔑 Viktiga begrepp i den här etappen</span>
-          ${ttsButton(vocabAudio, "Lyssna på begreppen")}
+      ${!isCA ? `
+        <div class="vocab-box">
+          <div class="vocab-box-title">
+            <span>🔑 Viktiga begrepp i den här etappen</span>
+            ${ttsButton(vocabAudio, "Lyssna på begreppen")}
+          </div>
+          <ul>
+            <li><strong>Hypotes:</strong> Ett testbart <strong>påstående</strong> (inte en fråga och inte en slumpvis gissning) om sambandet mellan <strong>två faktorer</strong>, som bygger på observationer eller tidigare kunskap. <em>Exempel: ”Klassisk musik förbättrar elevers resultat på ett lästest.”</em></li>
+            <li><strong>Vad kännetecknar ett vetenskapligt experiment?</strong> <em>(Vad som krävs):</em> 1) Man ändrar bara <strong>en faktor</strong> i taget (håller allt annat lika), 2) man mäter hur den andra faktorn påverkas, och 3) man beskriver försöket så tydligt att andra kan <strong>upprepa</strong> det.</li>
+          </ul>
         </div>
-        <ul>
-          <li><strong>Hypotes:</strong> Ett testbart <strong>påstående</strong> (inte en fråga och inte en slumpvis gissning) om hur <strong>två faktorer</strong> hänger ihop. Bygger på observationer eller tidigare kunskap. <em>Exempel: ”Klassisk musik förbättrar elevers resultat på ett lästest.”</em></li>
-          <li><strong>Vetenskapligt experiment:</strong> En undersökning där man medvetet ändrar <strong>en faktor</strong> i taget (håller allt annat lika) och beskriver försöket tydligt så att andra kan <strong>upprepa</strong> det.</li>
-        </ul>
-      </div>
+      ` : ''}
 
       ${historyHtml}
       ${currentPartHtml}
@@ -1635,10 +1939,11 @@ function renderStage1() {
 }
 
 function answerS1(idx) {
-  const q = s1Questions[state.s1Index];
+  const qList = state.levelMode === 'CA' ? s1QuestionsCA : s1QuestionsE;
+  const q = qList[state.s1Index];
   const chosen = q.options[idx];
   if (!chosen.correct) {
-    showToast("Inte riktigt! Läs i den blå begrepps-rutan högst upp och testa igen.");
+    showToast("Inte riktigt! Tänk på vad en hypotes och ett rättvist experiment kräver, och testa igen.");
     if (autoTts) speakText("Inte riktigt. Testa ett annat svar.");
     return;
   }
@@ -1681,8 +1986,10 @@ function finishStage1() {
   render();
 }
 
-/* --- STAGE 2: VOCAB CHECK + PSEUDOSCIENCE VS NATURAL SCIENCE (STACKED) --- */
+/* --- STAGE 2: PSEUDOSCIENCE VS NATURAL SCIENCE --- */
 function renderStage2() {
+  const isCA = state.levelMode === 'CA';
+  const items = isCA ? s2ItemsCA : s2ItemsE;
   const vocabAudio = "Viktiga begrepp i Etapp 2: Naturvetenskap är riktig vetenskap som bygger på testbara hypoteser, kontrollerade experiment och upprepbara resultat. Pseudovetenskap betyder låtsas-vetenskap. Ordet pseudo betyder falsk eller låtsas. Det låter vetenskapligt men saknar bevis och bygger ofta på enstaka personliga berättelser.";
 
   let historyHtml = '';
@@ -1714,7 +2021,7 @@ function renderStage2() {
   }
 
   let activeHtml = '';
-  if (!state.s2VocabDone) {
+  if (!isCA && !state.s2VocabDone && state.s2History.length === 0) {
     const qAudio = "Begrepps-koll innan vi börjar: Vad betyder ordet pseudovetenskap? Alternativ 1: Låtsas-vetenskap – det använder ord som låter vetenskapliga, men saknar bevis och kontrollerade experiment. Alternativ 2: Riktig vetenskap som testats många gånger i ett labb. Alternativ 3: En metod för att mäta ljudnivåer.";
     activeHtml = `
       <div class="active-question-box">
@@ -1740,15 +2047,15 @@ function renderStage2() {
         </div>
       </div>
     `;
-  } else if (state.s2Index < s2Items.length) {
-    const item = s2Items[state.s2Index];
-    const audioTxt = `Påstående ${state.s2Index + 1} av ${s2Items.length}: ${item.claim}. Är detta naturvetenskap eller pseudovetenskap?`;
+  } else if (state.s2Index < items.length) {
+    const item = items[state.s2Index];
+    const audioTxt = `Påstående ${state.s2Index + 1} av ${items.length}: ${item.claim}. Är detta naturvetenskap eller pseudovetenskap?`;
 
     activeHtml = `
       <div class="active-question-box">
         <div class="card-header-row">
           <div>
-            <span class="tag tag-e">Påstående ${state.s2Index + 1} av ${s2Items.length}</span>
+            <span class="tag ${isCA ? 'tag-ca' : 'tag-e'}">Påstående ${state.s2Index + 1} av ${items.length}</span>
             <p style="font-size: 1.18rem; font-weight: 700; margin: 6px 0 0 0;" data-autoread="${escapeHtml(audioTxt)}">
               ${escapeHtml(item.claim)}
             </p>
@@ -1756,7 +2063,7 @@ function renderStage2() {
           ${ttsButton(audioTxt, "Lyssna")}
         </div>
 
-        <p><strong>Steg 1:</strong> Vad är det här?</p>
+        <p><strong>Steg 1:</strong> Vad är det här för typ av påstående?</p>
         <div class="options-grid two-col">
           <button type="button" class="option-btn ${state.s2ChosenType === 'science' ? (item.type === 'science' ? 'correct' : 'wrong') : ''}"
             ${state.s2Step === 'reason' ? 'disabled' : ''} onclick="chooseS2Type('science')">
@@ -1785,7 +2092,7 @@ function renderStage2() {
   } else {
     activeHtml = `
       <div class="feedback-box show ok">
-        <strong>🎉 Snyggt jobbat!</strong> Ni har klarat begrepps-kollen och alla ${s2Items.length} påståenden. Ni kan läsa igenom era svar ovanför innan ni går vidare.
+        <strong>🎉 Snyggt jobbat!</strong> Ni har klarat alla påståenden i Etapp 2. Ni kan läsa igenom era svar ovanför innan ni går vidare.
       </div>
       <div class="nav-footer">
         <button type="button" class="btn-secondary" onclick="state.stage = 1; window.scrollTo({top:0, behavior:'smooth'}); render();">← Tillbaka till Etapp 1</button>
@@ -1798,22 +2105,24 @@ function renderStage2() {
     <div class="card">
       <div class="card-header-row">
         <div>
-          <span class="tag tag-e">E-nivå • Etapp 2 av 5</span>
+          <span class="tag ${isCA ? 'tag-ca' : 'tag-e'}">${isCA ? '🟣 C/A-nivå' : '🟢 E-nivå'} • Etapp 2 av 5</span>
           <h2>Naturvetenskap eller Pseudovetenskap?</h2>
         </div>
-        <span style="font-weight: 700; color: var(--text-muted);">${state.s2History.length} / ${s2Items.length} påståenden</span>
+        <span style="font-weight: 700; color: var(--text-muted);">${state.s2History.length} / ${items.length} påståenden</span>
       </div>
 
-      <div class="vocab-box">
-        <div class="vocab-box-title">
-          <span>🔑 Viktiga begrepp i den här etappen</span>
-          ${ttsButton(vocabAudio, "Lyssna på begreppen")}
+      ${!isCA ? `
+        <div class="vocab-box">
+          <div class="vocab-box-title">
+            <span>🔑 Viktiga begrepp i den här etappen</span>
+            ${ttsButton(vocabAudio, "Lyssna på begreppen")}
+          </div>
+          <ul>
+            <li><strong>Naturvetenskap:</strong> Riktig vetenskap som bygger på testbara hypoteser, kontrollerade experiment och upprepbara resultat.</li>
+            <li><strong>Pseudovetenskap:</strong> <em>"Låtsas-vetenskap"</em> ("pseudo" betyder falsk/låtsas). Använder ord som låter vetenskapliga men saknar bevis och bygger ofta på enstaka personliga berättelser.</li>
+          </ul>
         </div>
-        <ul>
-          <li><strong>Naturvetenskap:</strong> Riktig vetenskap som bygger på testbara hypoteser, kontrollerade experiment och upprepbara resultat.</li>
-          <li><strong>Pseudovetenskap:</strong> <em>"Låtsas-vetenskap"</em> ("pseudo" betyder falsk/låtsas). Använder ord som låter vetenskapliga men saknar bevis och bygger ofta på enstaka personliga berättelser.</li>
-        </ul>
-      </div>
+      ` : ''}
 
       ${historyHtml}
       ${activeHtml}
@@ -1832,19 +2141,21 @@ function answerS2Vocab(isOk) {
 }
 
 function chooseS2Type(type) {
-  const item = s2Items[state.s2Index];
+  const items = state.levelMode === 'CA' ? s2ItemsCA : s2ItemsE;
+  const item = items[state.s2Index];
   state.s2ChosenType = type;
   if (type === item.type) {
     state.s2Step = 'reason';
     render();
   } else {
-    showToast("Inte riktigt! Går det att mäta och testa i kontrollerade försök, eller saknar det bevis?");
+    showToast("Inte riktigt! Tänk efter: går det att testa och mäta på riktigt, eller låter det bara fint?");
     render();
   }
 }
 
 function chooseS2Reason(idx) {
-  const item = s2Items[state.s2Index];
+  const items = state.levelMode === 'CA' ? s2ItemsCA : s2ItemsE;
+  const item = items[state.s2Index];
   const reasonObj = item.reasons[idx];
   if (!reasonObj.correct) {
     showToast("Kolla noga på båda alternativen – vilket stämmer med hur vetenskap fungerar?");
@@ -1866,8 +2177,8 @@ function chooseS2Reason(idx) {
   if (autoTts) speakText(item.feedback);
 }
 
-/* --- STAGE 3: KÄLLKRITIK (ALL PARTS STAY VISIBLE) --- */
-const s3ReasonOptions = [
+/* --- STAGE 3: KÄLLKRITIK --- */
+const s3ReasonOptionsE = [
   { id: 'method', text: "I den vetenskapliga artikeln har forskare använt vetenskaplig metod i ett kontrollerat försök med 300 personer.", valid: true },
   { id: 'peer', text: "Andra oberoende forskare har granskat artikeln (kollegial granskning) innan den publicerades.", valid: true },
   { id: 'bias', text: "På sociala medier saknas granskning och Jocke styrs av ekonomiska intressen (han vill sälja sin egen olja).", valid: true },
@@ -1875,35 +2186,48 @@ const s3ReasonOptions = [
   { id: 'short', text: "För att korta texter på mobilen alltid är falska.", valid: false }
 ];
 
+const s3ReasonOptionsCA = [
+  { id: 'method', text: "I den vetenskapliga artikeln har man använt en vetenskaplig metod och gjort ett riktigt experiment.", valid: true },
+  { id: 'peer', text: "Innan den vetenskapliga artikeln publicerades har den granskats av andra forskare.", valid: true },
+  { id: 'bias', text: "På sociala medier finns inga krav på granskning, och inlägget styrs av ekonomiska intressen (han vill sälja sin olja).", valid: true },
+  { id: 'likes', text: "För att vetenskapliga artiklar alltid har snyggare bilder än TikTok.", valid: false },
+  { id: 'short', text: "För att Jocke skrev ett kort inlägg och korta texter är alltid falska.", valid: false }
+];
+
 function renderStage3() {
+  const isCA = state.levelMode === 'CA';
+  const reasonOpts = isCA ? s3ReasonOptionsCA : s3ReasonOptionsE;
   const vocabAudio = "Viktiga begrepp i Etapp 3: Källkritisk betyder att man bedömer tillförlitligheten i det man läser och hör. Kollegial granskning betyder att andra oberoende forskare kontrollerar studien innan den publiceras.";
+  const introAudio = "Etapp 3: Källkritik på bygget. Först: Vad menas med att någon är källkritisk? Jämför sedan inlägget från StarkBygg-Jocke med den vetenskapliga artikeln från Nordisk Arbetsmedicinsk Tidskrift.";
 
   return `
     <div class="card">
       <div class="card-header-row">
         <div>
-          <span class="tag tag-e">E/C-nivå • Etapp 3 av 5</span>
+          <span class="tag ${isCA ? 'tag-ca' : 'tag-e'}">${isCA ? '🟣 C/A-nivå' : '🟢 E-nivå'} • Etapp 3 av 5</span>
           <h2>Källkritik: Influencern vs. Forskningsartikeln</h2>
         </div>
-        ${ttsButton(vocabAudio, "Lyssna")}
+        ${ttsButton(introAudio, "Lyssna")}
       </div>
 
-      <div class="vocab-box">
-        <div class="vocab-box-title">
-          <span>🔑 Viktiga begrepp i den här etappen</span>
-          ${ttsButton(vocabAudio, "Lyssna på begreppen")}
+      ${!isCA ? `
+        <div class="vocab-box">
+          <div class="vocab-box-title">
+            <span>🔑 Viktiga begrepp i den här etappen</span>
+            ${ttsButton(vocabAudio, "Lyssna på begreppen")}
+          </div>
+          <ul>
+            <li><strong>Källkritisk:</strong> Att bedöma tillförlitligheten i det man läser och hör (vem står bakom och går det att lita på?).</li>
+            <li><strong>Kollegial granskning:</strong> Andra oberoende forskare kontrollerar metoden och resultaten innan en artikel publiceras.</li>
+          </ul>
         </div>
-        <ul>
-          <li><strong>Källkritisk:</strong> Att bedöma tillförlitligheten i det man läser och hör (vem står bakom och går det att lita på?).</li>
-          <li><strong>Kollegial granskning:</strong> Andra oberoende forskare kontrollerar metoden och resultaten innan en artikel publiceras.</li>
-        </ul>
-      </div>
+      ` : ''}
 
       <h3>Del 1: Vad menas med att någon är källkritisk?</h3>
       <div class="options-grid">
         <button type="button" class="option-btn ${state.s3DefAnswered ? (state.s3DefCorrect ? 'correct' : 'wrong') : ''}"
           onclick="answerS3Def(true)">
-          ✓ Att man bedömer tillförlitligheten i det man läser och hör (kollar vem som står bakom och om det går att lita på).
+          ${state.s3DefCorrect ? '✓ ' : ''}Att man bedömer tillförlitligheten i det man läser och hör (kollar vem som står bakom och om det går att lita på).
         </button>
         <button type="button" class="option-btn ${state.s3DefAnswered && !state.s3DefCorrect ? 'wrong' : ''}"
           onclick="answerS3Def(false)">
@@ -1918,27 +2242,27 @@ function renderStage3() {
         <div class="source-card social">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <strong>📱 Källa A: ”StarkBygg-Jocke” (Sociala medier)</strong>
-            ${ttsButton("Källa A: StarkBygg-Jocke på sociala medier. Släng knäskydden! Min Mirakel-Ledolja fixar onda knän på 3 dagar. Jag har testat själv! Köp flaskan via min länk för 499 kronor.")}
+            ${ttsButton("Källa A: StarkBygg-Jocke på sociala medier. Rubrik: Släng knäskydden! Min mirakel-ledolja fixar onda byggknän på tre dagar. Köp flaskan via min länk för 499 kronor, rabattkod JOCKE20!")}
           </div>
           <p style="margin-top:10px;">
-            <em>”Släng knäskydden! Min Mirakel-Ledolja fixar onda knän på 3 dagar. Jag har testat själv och kände skillnad direkt! Köp flaskan via min länk för 499 kr!”</em>
+            <em>”Släng knäskydden! Min Mirakel-Ledolja fixar onda byggknän på 3 dagar. Jag har testat själv och kände skillnad direkt! Köp flaskan via min länk för 499 kr (kod: JOCKE20)!”</em>
           </p>
         </div>
 
         <div class="source-card science">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <strong>📄 Källa B: Vetenskaplig artikel</strong>
-            ${ttsButton("Källa B: Vetenskaplig artikel. 300 golvläggare följdes under ett år i ett kontrollerat försök med och utan ergonomiska knäskydd. Resultaten granskades av oberoende forskare före publicering.")}
+            ${ttsButton("Källa B: Vetenskaplig artikel i Nordisk Arbetsmedicinsk Tidskrift. Studie av 300 golvläggare under ett år. Forskarna mätte belastning och knäbesvär med och utan ergonomiska knäskydd. Artikeln är granskad av oberoende forskare före publicering.")}
           </div>
           <p style="margin-top:10px;">
-            <em>300 golvläggare följdes under 1 år i ett kontrollerat försök med och utan ergonomiska knäskydd. Resultaten granskades av oberoende forskare innan artikeln publicerades.</em>
+            <em>Publicerad i Nordisk Arbetsmedicinsk Tidskrift. 300 golvläggare följdes under 1 år i ett kontrollerat försök. Resultaten granskades av andra oberoende forskare innan artikeln publicerades.</em>
           </p>
         </div>
       </div>
 
       <p><strong>Välj TVÅ starka skäl</strong> till varför man bör lita mer på den vetenskapliga artikeln (Källa B) än på StarkBygg-Jockes inlägg (Källa A):</p>
       <div class="options-grid">
-        ${s3ReasonOptions.map(opt => {
+        ${reasonOpts.map(opt => {
           const isSel = state.s3ReasonsSelected.includes(opt.id);
           let cls = 'option-btn';
           if (state.s3ReasonsChecked) {
@@ -1961,8 +2285,8 @@ function renderStage3() {
 
       <div class="feedback-box ${state.s3ReasonsChecked ? 'show ' + (state.s3ReasonsScore === 2 ? 'ok' : 'err') : ''}">
         ${state.s3ReasonsScore === 2
-          ? '✅ Helt rätt! Ni har valt två starka källkritiska skäl. Era val ligger kvar här ovanför som hjälp till nästa ruta.'
-          : '💡 Välj två alternativ som handlar om vetenskaplig metod, kollegial granskning eller ekonomiska intressen.'}
+          ? '✅ Helt rätt! Ni har valt två klockrena vetenskapliga och källkritiska skäl (metod/experiment, kollegial granskning samt avsaknad av ekonomiskt vinstintresse).'
+          : '💡 Ni behöver två korrekta skäl. Avmarkera eventuella felaktiga alternativ och välj två som handlar om vetenskaplig metod, granskning av forskare eller vinstintresse.'}
       </div>
 
       <div class="pair-box">
@@ -1971,16 +2295,18 @@ function renderStage3() {
             <span class="tag tag-pair">🗣️ Par-snack #2 • Källkritik</span>
             <h3>Motivera högt med egna ord!</h3>
           </div>
-          ${ttsButton("Par-snack 2: Titta på era rätta svar här ovanför. Berätta högt för varandra varför en vetenskaplig artikel väger tyngre än en blogg eller sociala medier, och skriv ner era två bästa skäl.")}
+          ${ttsButton("Par-snack 2: Berätta högt för varandra varför en vetenskaplig artikel väger tyngre än en blogg eller ett inlägg på sociala medier. Skriv sedan ner era två bästa skäl.")}
         </div>
         <div class="no-paste-badge">🚫 Klistra in är avstängt – skriv med era egna ord</div>
         <label for="txtPair2">Skriv era två skäl till varför den vetenskapliga artikeln är mer pålitlig:</label>
-        <div class="starter-chips">
-          <button type="button" class="chip-btn" onclick="insertStarter('txtPair2', '1. Den vetenskapliga artikeln bygger på ett kontrollerat experiment. 2. Den är granskad av andra forskare och ')">
-            + Starta meningen åt oss
-          </button>
-        </div>
-        <textarea id="txtPair2" class="no-paste" rows="3" placeholder="1. I en vetenskaplig artikel har man... 2. Dessutom har den...">${escapeHtml(state.pair2Text)}</textarea>
+        ${!isCA ? `
+          <div class="starter-chips">
+            <button type="button" class="chip-btn" onclick="insertStarter('txtPair2', '1. Den vetenskapliga artikeln bygger på ett kontrollerat experiment. 2. Den är granskad av andra forskare och ')">
+              + Starta meningen åt oss
+            </button>
+          </div>
+        ` : ''}
+        <textarea id="txtPair2" class="no-paste" rows="4" placeholder="1. I en vetenskaplig artikel har man... 2. Dessutom har den...">${escapeHtml(state.pair2Text)}</textarea>
 
         <label class="checkbox-row">
           <input type="checkbox" id="chkPair2" ${state.pair2Spoken ? 'checked' : ''} />
@@ -2000,7 +2326,7 @@ function answerS3Def(isCorrect) {
   state.s3DefAnswered = true;
   state.s3DefCorrect = isCorrect;
   if (!isCorrect) {
-    showToast("Nja! Att vara källkritisk betyder att man bedömer tillförlitligheten.");
+    showToast("Nja! Att vara källkritisk betyder inte att man säger emot allt, utan att man bedömer tillförlitligheten.");
   }
   render();
 }
@@ -2012,7 +2338,7 @@ function toggleS3Reason(id) {
     state.s3ReasonsSelected.splice(idx, 1);
   } else {
     if (state.s3ReasonsSelected.length >= 2) {
-      showToast("Ni kan max välja 2 skäl. Klicka på ett valt svar för att avmarkera det först.");
+      showToast("Du kan max välja 2 skäl åt gången. Avmarkera ett först om du vill byta.");
       return;
     }
     state.s3ReasonsSelected.push(id);
@@ -2022,12 +2348,13 @@ function toggleS3Reason(id) {
 
 function checkS3Reasons() {
   if (state.s3ReasonsSelected.length !== 2) {
-    showToast("Välj exakt 2 skäl innan ni kontrollerar!");
+    showToast("Välj exakt 2 skäl innan du kontrollerar!");
     return;
   }
+  const opts = state.levelMode === 'CA' ? s3ReasonOptionsCA : s3ReasonOptionsE;
   let validCount = 0;
   state.s3ReasonsSelected.forEach(id => {
-    const found = s3ReasonOptions.find(o => o.id === id);
+    const found = opts.find(o => o.id === id);
     if (found && found.valid) validCount++;
   });
   state.s3ReasonsScore = validCount;
@@ -2041,7 +2368,7 @@ function finishStage3() {
     return;
   }
   if (state.s3ReasonsScore < 2) {
-    showToast("Välj två rätta skäl i Del 2 och klicka på 'Kontrollera mina 2 val'!");
+    showToast("Välj två korrekta skäl i Del 2 och klicka på 'Kontrollera mina 2 val'!");
     return;
   }
   const txt = document.getElementById('txtPair2').value.trim();
@@ -2063,6 +2390,8 @@ function finishStage3() {
 
 /* --- STAGE 4: MEDICAL BREAKTHROUGHS & FRAUD (STACKED ANSWERS) --- */
 function renderStage4() {
+  const isCA = state.levelMode === 'CA';
+  const cards = isCA ? s4CardsCA : s4CardsE;
   const vocabAudio = "Viktiga begrepp i Etapp 4: Sterilteknik är rengöring av händer och instrument för att stoppa bakterier. Forskningsfusk är att plagiera andras texter eller medvetet förfalska eller undanhålla forskningsresultat.";
 
   let historyHtml = '';
@@ -2082,15 +2411,15 @@ function renderStage4() {
   }
 
   let activeHtml = '';
-  if (state.s4Index < s4Cards.length) {
-    const c = s4Cards[state.s4Index];
+  if (state.s4Index < cards.length) {
+    const c = cards[state.s4Index];
     const fullAudio = `${c.category}. ${c.prompt}. Alternativ 1: ${c.options[0].text}. Alternativ 2: ${c.options[1].text}. Alternativ 3: ${c.options[2].text}.`;
 
     activeHtml = `
       <div class="active-question-box">
         <div class="card-header-row">
           <div>
-            <span class="tag tag-e">Fråga ${state.s4Index + 1} av ${s4Cards.length} • ${escapeHtml(c.category)}</span>
+            <span class="tag ${isCA ? 'tag-ca' : 'tag-e'}">Kort ${state.s4Index + 1} av ${cards.length} • ${escapeHtml(c.category)}</span>
             <p style="font-size: 1.15rem; font-weight: 700; margin: 4px 0 0 0;" data-autoread="${escapeHtml(fullAudio)}">
               ${escapeHtml(c.prompt)}
             </p>
@@ -2125,22 +2454,24 @@ function renderStage4() {
     <div class="card">
       <div class="card-header-row">
         <div>
-          <span class="tag tag-e">E-nivå • Etapp 4 av 5</span>
+          <span class="tag ${isCA ? 'tag-ca' : 'tag-e'}">${isCA ? '🟣 C/A-nivå' : '🟢 E-nivå'} • Etapp 4 av 5</span>
           <h2>Medicinska genombrott & Forskningsfusk</h2>
         </div>
-        <span style="font-weight: 700; color: var(--text-muted);">${state.s4History.length} / ${s4Cards.length} klara</span>
+        <span style="font-weight: 700; color: var(--text-muted);">${state.s4History.length} / ${cards.length} klara</span>
       </div>
 
-      <div class="vocab-box">
-        <div class="vocab-box-title">
-          <span>🔑 Viktiga begrepp i den här etappen</span>
-          ${ttsButton(vocabAudio, "Lyssna på begreppen")}
+      ${!isCA ? `
+        <div class="vocab-box">
+          <div class="vocab-box-title">
+            <span>🔑 Viktiga begrepp i den här etappen</span>
+            ${ttsButton(vocabAudio, "Lyssna på begreppen")}
+          </div>
+          <ul>
+            <li><strong>Sterilteknik:</strong> Rengöring av händer, sår och instrument för att stoppa bakterier vid operationer.</li>
+            <li><strong>Forskningsfusk:</strong> Att plagiera (kopiera) andras texter, eller att medvetet förfalska eller undanhålla forskningsresultat.</li>
+          </ul>
         </div>
-        <ul>
-          <li><strong>Sterilteknik:</strong> Rengöring av händer, sår och instrument för att stoppa bakterier vid operationer.</li>
-          <li><strong>Forskningsfusk:</strong> Att plagiera (kopiera) andras texter, eller att medvetet förfalska eller undanhålla forskningsresultat.</li>
-        </ul>
-      </div>
+      ` : ''}
 
       ${historyHtml}
       ${activeHtml}
@@ -2149,10 +2480,11 @@ function renderStage4() {
 }
 
 function answerS4(idx) {
-  const c = s4Cards[state.s4Index];
+  const cards = state.levelMode === 'CA' ? s4CardsCA : s4CardsE;
+  const c = cards[state.s4Index];
   const chosen = c.options[idx];
   if (!chosen.correct) {
-    showToast("Inte riktigt! Läs i den blå begrepps-rutan och försök igen.");
+    showToast("Inte riktigt! Tänk efter och försök igen.");
     return;
   }
 
@@ -2167,25 +2499,29 @@ function answerS4(idx) {
   if (autoTts) speakText("Rätt! " + c.explanation);
 }
 
-/* --- STAGE 5: ORAL REHEARSAL (WITH ACCESS TO EARLIER ANSWERS) --- */
+/* --- STAGE 5: ORAL REHEARSAL --- */
 function renderStage5() {
-  const item = s5Questions[state.s5Index];
+  const isCA = state.levelMode === 'CA';
+  const qList = isCA ? s5QuestionsCA : s5QuestionsE;
+  const item = qList[state.s5Index];
+  const fullQAudio = item.sub ? `${item.q} ${item.sub}` : item.q;
   const checkText = item.checklist.join(' ');
 
   return `
     <div class="card">
       <div class="card-header-row">
         <div>
-          <span class="tag tag-pair">🎤 Muntligt genrep • Fråga ${state.s5Index + 1} av ${s5Questions.length}</span>
+          <span class="tag tag-pair">🎤 Muntligt genrep • Fråga ${state.s5Index + 1} av ${qList.length}</span>
           <h2>Träna som på riktiga provet</h2>
         </div>
-        ${ttsButton(item.q, "Läs upp frågan")}
+        ${ttsButton(fullQAudio, "Läs upp frågan")}
       </div>
 
       <div style="background: var(--bg-card-alt); border: 2px solid var(--accent); padding: 20px; border-radius: 12px; margin: 14px 0;">
-        <p style="font-size: 1.25rem; font-weight: 800; margin: 0;" data-autoread="${escapeHtml(item.q)}">
+        <p style="font-size: 1.25rem; font-weight: 800; margin: 0;" data-autoread="${escapeHtml(fullQAudio)}">
           ${escapeHtml(item.q)}
         </p>
+        ${item.sub ? `<span class="sub-clarify" style="margin-top: 8px; font-size: 1.02rem;">${escapeHtml(item.sub)}</span>` : ''}
       </div>
 
       <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 16px 0;">
@@ -2212,13 +2548,13 @@ function renderStage5() {
 
       ${!state.s5Revealed ? `
         <button type="button" class="btn-primary" style="margin-top: 8px;" onclick="revealOral()">
-          👀 Visa facit & E-checklista
+          👀 Visa facit & checklista
         </button>
       ` : `
         <div class="feedback-box show ok">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
             <div>
-              <strong>✅ Det här ska finnas med för E-nivå:</strong>
+              <strong>✅ Det här ska finnas med i ert muntliga svar:</strong>
               <ul style="margin: 8px 0 0 0;">
                 ${item.checklist.map(c => `<li>${escapeHtml(c)}</li>`).join('')}
               </ul>
@@ -2267,8 +2603,9 @@ function revealOral() {
 }
 
 function rateOral(rating) {
+  const qList = state.levelMode === 'CA' ? s5QuestionsCA : s5QuestionsE;
   state.s5Ratings[state.s5Index] = rating;
-  if (state.s5Index < s5Questions.length - 1) {
+  if (state.s5Index < qList.length - 1) {
     state.s5Index++;
     state.s5Revealed = false;
     state.s5TimerVal = 45;
@@ -2280,21 +2617,27 @@ function rateOral(rating) {
   }
 }
 
-/* --- STAGE 6: OPTIONAL C/A BONUS (FULL C/A RIGOR PRESERVED) --- */
+/* --- STAGE 6: C/A DEPTH (Optional Bonus in E-mode, Core Stage in C/A-mode) --- */
 function renderStage6() {
-  const caIntro = "Snyggt jobbat! Ni har klarat hela grundbanan för E-nivå. Vill ni sikta mot C eller A kan ni göra den här bonusuppgiften om kollegial granskning, ekonomiska intressen och forskningsfusk – annars kan ni hoppa direkt till sammanfattningen.";
+  const isCA = state.levelMode === 'CA';
+  const caIntro = isCA
+    ? "Etapp 6: Fördjupning på C och A-nivå. Analysera hur man avslöjar vinklad forskning där ekonomiska intressen och avsaknad av kollegial granskning spelar in."
+    : "Snyggt jobbat! Ni har klarat hela grundbanan för E-nivå. Vill ni sikta mot C eller A kan ni göra den här korta bonusuppgiften om kollegial granskning och forskningsfusk – annars kan ni hoppa direkt till sammanfattningen.";
+
   return `
     <div class="card">
       <div class="card-header-row">
         <div>
-          <span class="tag tag-ca">⭐ Valfri Bonus • Sikta mot C/A</span>
+          <span class="tag tag-ca">${isCA ? '🟣 C/A-nivå • Etapp 6 av 6' : '⭐ Valfri Bonus • Sikta mot C/A'}</span>
           <h2>Fördjupning: Hur avslöjas vinklad forskning?</h2>
         </div>
         ${ttsButton(caIntro, "Lyssna")}
       </div>
 
       <p data-autoread="${escapeHtml(caIntro)}">
-        Ni är nu klara med hela E-nivån! Om ni har tid kvar eller siktar på <strong>C eller A</strong>, testa den här fördjupande uppgiften tillsammans:
+        ${isCA
+          ? 'På <strong>C- och A-nivå</strong> ska ni kunna ge nyanserade motiveringar med flera vetenskapliga argument:'
+          : 'Ni är nu klara med hela E-nivån! Om ni har tid kvar eller siktar på <strong>C eller A</strong>, testa den här klurigare frågan tillsammans:'}
       </p>
 
       <div style="background: var(--bg-card-alt); padding: 18px; border-radius: 12px; border: 1px solid var(--border); margin: 16px 0;">
@@ -2314,17 +2657,23 @@ function renderStage6() {
 
         <div style="margin-top: 18px;">
           <div class="no-paste-badge">🚫 Klistra in är avstängt – skriv med egna ord</div>
-          <label for="txtCa">C/A-utmaning: Förklara varför det är så viktigt att andra forskare kan <em>upprepa</em> ett experiment (koppla gärna till forskningsfusk och tillförlitlighet):</label>
+          <label for="txtCa">C/A-utmaning: Förklara varför det är så viktigt att andra forskare kan <em>upprepa</em> ett experiment (koppla gärna till forskningsfusk):</label>
           <textarea id="txtCa" class="no-paste" rows="3" placeholder="Om andra forskare upprepar experimentet kan man se om...">${escapeHtml(state.caText)}</textarea>
         </div>
       </div>
 
       <div class="nav-footer">
-        <button type="button" class="btn-secondary" onclick="skipBonus()">
-          Hoppa över bonus → Gå till sammanfattning
-        </button>
+        ${!isCA ? `
+          <button type="button" class="btn-secondary" onclick="skipBonus()">
+            Hoppa över bonus → Gå till sammanfattning
+          </button>
+        ` : `
+          <button type="button" class="btn-secondary" onclick="state.stage = 5; window.scrollTo({top:0, behavior:'smooth'}); render();">
+            ← Tillbaka till muntliga genrepet
+          </button>
+        `}
         <button type="button" class="btn-primary" onclick="finishBonus()">
-          Spara bonus & gå till sammanfattning →
+          Spara & gå till sammanfattning →
         </button>
       </div>
     </div>
@@ -2350,7 +2699,11 @@ function skipBonus() {
 function finishBonus() {
   const txt = document.getElementById('txtCa').value.trim();
   if (!state.caChoiceCorrect && txt.length < 10) {
-    showToast("Svara på flervalsfrågan eller skriv ett kort svar i rutan – eller välj 'Hoppa över bonus'.");
+    showToast(
+      state.levelMode === 'CA'
+        ? "Svara rätt på flervalsfrågan och skriv en kort motivering i rutan!"
+        : "Svara på flervalsfrågan eller skriv ett kort svar i rutan – eller välj 'Hoppa över bonus'."
+    );
     return;
   }
   state.caText = txt;
@@ -2362,8 +2715,13 @@ function finishBonus() {
 
 /* --- STAGE 7: FINAL SUMMARY & GOOGLE CLASSROOM COPY --- */
 function buildSummaryReport() {
+  const isCA = state.levelMode === 'CA';
   const mins = Math.max(1, Math.round((Date.now() - state.startTime) / 60000));
   const nowStr = new Date().toLocaleDateString('sv-SE');
+  const q1Len = isCA ? s1QuestionsCA.length : s1QuestionsE.length;
+  const s2Len = isCA ? s2ItemsCA.length : s2ItemsE.length;
+  const s4Len = isCA ? s4CardsCA.length : s4CardsE.length;
+  const s5Len = isCA ? s5QuestionsCA.length : s5QuestionsE.length;
   const greenCount = state.s5Ratings.filter(r => r === 'green').length;
 
   let lines = [
@@ -2374,14 +2732,15 @@ function buildSummaryReport() {
     `Datum: ${nowStr}`,
     `Elever: ${state.student1} & ${state.student2}`,
     state.classGroup ? `Klass/Grupp: ${state.classGroup}` : null,
+    `Vald nivå i appen: ${isCA ? 'C/A-nivå' : 'E-nivå'}`,
     `Arbetstid i appen: ca ${mins} min`,
     "",
-    "--- RESULTAT ÖVERSIKT (E-NIVÅ) ---",
-    `• Etapp 1 (Hypotes & Experiment): ${state.s1Score} / ${s1Questions.length} rätt`,
-    `• Etapp 2 (Naturvetenskap vs. Pseudovetenskap): Begrepps-koll Klar + ${state.s2Score} / ${s2Items.length} rätt`,
+    "--- RESULTAT ÖVERSIKT ---",
+    `• Etapp 1 (Hypotes & Experiment): ${state.s1Score} / ${q1Len} rätt`,
+    `• Etapp 2 (Naturvetenskap vs. Pseudovetenskap): ${state.s2Score} / ${s2Len} rätt`,
     `• Etapp 3 (Källkritik): Definition ${state.s3DefCorrect ? 'Rätt' : 'Ej klar'} | Två skäl: ${state.s3ReasonsScore} / 2 rätt`,
-    `• Etapp 4 (Medicinska upptäckter & Forskningsfusk): ${state.s4Score} / ${s4Cards.length} rätt`,
-    `• Etapp 5 (Muntligt genrep): ${greenCount} / ${s5Questions.length} frågor sattes direkt vid muntlig övning`,
+    `• Etapp 4 (Medicinska upptäckter & Forskningsfusk): ${state.s4Score} / ${s4Len} rätt`,
+    `• Etapp 5 (Muntligt genrep): ${greenCount} / ${s5Len} frågor sattes direkt vid muntlig övning`,
     "",
     "--- PARETS EGNA FÖRKLARINGAR ---",
     "1. Hypotes & Vetenskapligt experiment (Par-snack #1):",
@@ -2394,7 +2753,7 @@ function buildSummaryReport() {
   if (state.didBonus) {
     lines.push(
       "",
-      "--- BONUS-ETAPP (SIKTA MOT C/A) ---",
+      "--- FÖRDJUPNING (C/A-NIVÅ) ---",
       `• Flervalsanalys av vinklad företagsstudie: ${state.caChoiceCorrect ? 'Rätt' : 'Försökt'}`,
       "• Egen reflektion kring upprepbarhet & forskningsfusk:",
       state.caText || "(Ej ifyllt)"
@@ -2412,7 +2771,7 @@ function buildSummaryReport() {
 
 function renderSummary() {
   const report = buildSummaryReport();
-  const doneAudio = "Grymt jobbat! Ni är klara med Lektion 1. Klicka på knappen Kopiera sammanfattning och klistra in texten i ert dokument i Google Classroom.";
+  const doneAudio = "Grymt jobbat! Ni är klara med Lektion 1. Klicka på knappen Kopiera sammanfattning och klistra in texten i ert delade dokument i Google Classroom.";
 
   return `
     <div class="card">
